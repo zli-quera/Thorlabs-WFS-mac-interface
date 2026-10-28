@@ -18,12 +18,13 @@ from factory_reference import reference_from_factory
 from factory_memory import decode as decode_factory
 from simulation import Simulator, DEFAULTS, LIMITS, FPS
 from preview import camera_preview
+from background import subtract_background
 
 ROOT = Path(__file__).resolve().parents[1]
 app = Flask(__name__, static_folder='static', static_url_path='')
 bridge = CameraBridge(ROOT)
 lock = threading.RLock()
-config = dict(threshold_dn=20, min_spots=20, focal_mm=None, remove_tilt=True, tilt_limit_urad=500., exposure_ms=10., gain=0)
+config = dict(threshold_dn=20, min_spots=20, focal_mm=None, remove_tilt=True, tilt_limit_urad=500., exposure_ms=10., gain=0, remove_background=False)
 reference = None
 factory_profile = None
 factory_error = None
@@ -77,23 +78,27 @@ def process():
             key = (meta['time'], version)
             if key != previous:
                 try:
-                    image = np.frombuffer(pixels, np.uint8).reshape(meta['height'], meta['width']).copy()
+                    raw = np.frombuffer(pixels, np.uint8).reshape(meta['height'], meta['width']).copy()
+                    image,background_dn=subtract_background(raw,settings['remove_background'])
+                    saturation_source=raw if settings['remove_background'] else None
                     active_ref=ref
                     if active_ref is None and factory_profile is not None and not meta.get('diagnostic',False):
-                        spots=detect_spots(image,settings['threshold_dn'])
+                        spots=detect_spots(image,settings['threshold_dn'],saturation_source=saturation_source)
                         if len(spots.xy)>=settings['min_spots'] and spots.saturated_fraction<=.02:
                             try:active_ref=reference_from_factory(spots,image.shape,factory_profile)
                             except ValueError as error:
-                                result,_=analyze(image,settings,spots=spots)
+                                result,_=analyze(image,settings,spots=spots,saturation_source=saturation_source)
                                 result['reason']=str(error)
-                            else:result,_=analyze(image,settings,active_ref,spots=spots)
-                        else:result,_=analyze(image,settings,spots=spots)
-                    else:result,_=analyze(image, settings, active_ref, meta.get('diagnostic', False))
+                            else:result,_=analyze(image,settings,active_ref,spots=spots,saturation_source=saturation_source)
+                        else:result,_=analyze(image,settings,spots=spots,saturation_source=saturation_source)
+                    else:result,_=analyze(image, settings, active_ref, meta.get('diagnostic', False),saturation_source=saturation_source)
                     result['reference_kind']=active_ref.get('kind') if active_ref else None
-                    rendered_preview=camera_preview(image)
+                    result['background_dn_subtracted']=background_dn
+                    result['peak_dn']=int(raw.max())
+                    rendered_preview=camera_preview(image,saturation_source=raw)
                     with lock:
                         if version == revision:
-                            frame, metadata, state, preview = image, meta, result, rendered_preview
+                            frame, metadata, state, preview = raw, meta, result, rendered_preview
                     now=time.monotonic()
                     source=meta.get('source','native')
                     if source!=rate_source:
@@ -140,7 +145,7 @@ def get_frame():
 
 @app.post('/api/config')
 def configure():
-    global revision, state
+    global revision, state, reference
     data = request.get_json() or {}
     try:
         changed = {}
@@ -153,10 +158,14 @@ def configure():
                     if not np.isfinite(value) or not lo <= value <= hi or (key=='gain' and value!=int(value)):
                         raise ValueError(f'{key} must be between {lo} and {hi}')
                     changed[key] = int(value) if key in ('min_spots','gain') else value
+        if 'remove_background' in data:
+            if not isinstance(data['remove_background'],bool):raise ValueError('remove_background must be true or false')
+            changed['remove_background']=data['remove_background']
         if 'remove_tilt' in data:
             changed['remove_tilt'] = bool(data['remove_tilt'])
         with lock:
             bridge.controls(changed.get('exposure_ms',config['exposure_ms']),changed.get('gain',config['gain']))
+            if changed.get('remove_background',config['remove_background'])!=config['remove_background']:reference=None
             config.update(changed)
             revision += 1
             state = dict(visible=False,reason='Updating settings',wavefront=None)
@@ -174,7 +183,8 @@ def set_reference():
         if simulator is not None:return jsonify(error='Test mode always uses the factory reference'),400
         if frame is None or (offline_capture is None and (bridge.stopping.is_set() or time.time()-metadata.get('time',0)>3)):
             return jsonify(error='Wait for a live image'),400
-        result, spots = analyze(frame,config)
+        reference_image,_=subtract_background(frame,config['remove_background'])
+        result, spots = analyze(reference_image,config,saturation_source=frame)
         if len(spots.xy)<config['min_spots'] or spots.saturated_fraction>.02 or metadata.get('diagnostic'):
             return jsonify(error='Reference requires an illuminated, unsaturated spot field above threshold'),400
         try:

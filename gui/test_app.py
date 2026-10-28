@@ -33,6 +33,15 @@ class OfflineAPITests(unittest.TestCase):
             self.assertEqual(self.client.post('/api/simulation',json={'enabled':False}).status_code,200)
             self.assertIsNone(viewer.simulator)
 
+    def test_background_is_one_boolean_option(self):
+        viewer.reference={'test':'old measured reference'}
+        self.assertEqual(self.client.post('/api/config',json={'remove_background':True}).status_code,200)
+        self.assertTrue(viewer.config['remove_background'])
+        self.assertIsNone(viewer.reference)
+        self.assertEqual(self.client.post('/api/config',json={'remove_background':False}).status_code,200)
+        self.assertFalse(viewer.config['remove_background'])
+        self.assertEqual(self.client.post('/api/config',json={'remove_background':'yes'}).status_code,400)
+
     def test_cutoff_validation_and_acceptance(self):
         for bad in (-1,'nan','inf'):
             self.assertEqual(self.client.post('/api/config',json={'tilt_limit_urad':bad}).status_code,400)

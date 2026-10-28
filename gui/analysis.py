@@ -34,14 +34,16 @@ class Spots:
     saturated_fraction: float
 
 
-def detect_spots(frame, threshold=20):
+def detect_spots(frame, threshold=20, saturation_source=None):
     image = np.asarray(frame, dtype=np.float32)
     background = float(np.percentile(image[::4, ::4], 30))
     low = image[::4, ::4]
     low = low[low <= np.percentile(low, 60)]
     noise = max(.5, float(np.median(np.abs(low - np.median(low))) * 1.4826))
     peak = float(image.max())
-    saturated = float(np.mean(image >= 254))
+    sensor=np.asarray(frame if saturation_source is None else saturation_source)
+    if sensor.shape!=image.shape:raise ValueError('Saturation source shape does not match image')
+    saturated = float(np.mean(sensor >= 254))
     empty = Spots(np.empty((0, 2)), np.empty(0), np.empty(0), background, noise, peak, saturated)
     cutoff = background + max(float(threshold), 5 * noise)
     if peak < cutoff:
@@ -60,6 +62,8 @@ def detect_spots(frame, threshold=20):
     sizes = np.bincount(labels.ravel(), minlength=count + 1)[1:]
     peaks = ndimage.maximum(image, labels, indices)
     good = (sizes >= 3) & (sizes <= 400) & (peaks < 254)
+    if saturation_source is not None:
+        good &= np.asarray(ndimage.maximum(sensor[y0:y1,x0:x1],labels,indices))<254
     indices, peaks = indices[good], np.asarray(peaks)[good]
     if not len(indices):
         return empty
@@ -144,8 +148,8 @@ def basis(x, y, derivative=None):
     return np.stack(columns, axis=-1)
 
 
-def analyze(frame, config, reference=None, diagnostic=False, *, spots=None):
-    if spots is None:spots = detect_spots(frame, config.get("threshold_dn", 20))
+def analyze(frame, config, reference=None, diagnostic=False, *, spots=None, saturation_source=None):
+    if spots is None:spots = detect_spots(frame, config.get("threshold_dn", 20),saturation_source=saturation_source)
     minimum = int(config.get("min_spots", 20))
     result = {"visible": False, "reason": "Signal below threshold", "spot_count": len(spots.xy),
               "spots": spots.xy.tolist(), "peak_dn": spots.peak,
