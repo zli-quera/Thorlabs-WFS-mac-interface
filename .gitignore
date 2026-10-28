@@ -1,0 +1,23 @@
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local camera data, calibration, logs and VM runtime
+/runtime/
+/captures/
+/diagnostics/
+/identity.json
+/status.txt
+
+# Instrument-specific firmware and USB recordings stay local
+/native/recipe.json.gz
+/native/usb_trace*.bin
+/native/trace_enabled
+
+# Generated native libraries, VM disks and macOS metadata
+*.dylib
+*.qcow2
+.DS_Store

@@ -1,0 +1,972 @@
+{
+  "settings": {
+    "width": 2048,
+    "height": 2048,
+    "bits": 8,
+    "exposure_ms": 10,
+    "gain_percent": 0,
+    "gui_throttle_disabled": true,
+    "warmup_frames": 4,
+    "analysis_included": false,
+    "cpu_unit": "100% is one CPU core",
+    "rss_scope": "benchmark host plus QEMU when present"
+  },
+  "results": [
+    {
+      "backend": "vm",
+      "startup_seconds": 45.7091773749562,
+      "frames": 30,
+      "elapsed_seconds": 2.621940333978273,
+      "delivered_fps": 11.441907968394142,
+      "capture_median_ms": 54.97099999999833,
+      "capture_p95_ms": 66.70400000000143,
+      "cpu_percent_one_core": 99.92599625730901,
+      "resident_mib": 1084.546875,
+      "samples": [
+        {
+          "observed": 675200.204016208,
+          "metadata": {
+            "sequence": 5,
+            "time": 1793156917.568001,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 4,
+            "device_timestamp": 55064918,
+            "capture_seconds": 0.050459000000003584,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.29319775,
+          "metadata": {
+            "sequence": 6,
+            "time": 1793156917.655328,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 5,
+            "device_timestamp": 55889217,
+            "capture_seconds": 0.055252000000002965,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.380835833,
+          "metadata": {
+            "sequence": 7,
+            "time": 1793156917.741544,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 6,
+            "device_timestamp": 56766613,
+            "capture_seconds": 0.053803000000002044,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.465720041,
+          "metadata": {
+            "sequence": 8,
+            "time": 1793156917.8287082,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 7,
+            "device_timestamp": 57625318,
+            "capture_seconds": 0.05502599999999802,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.560585541,
+          "metadata": {
+            "sequence": 9,
+            "time": 1793156917.920148,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 8,
+            "device_timestamp": 58509923,
+            "capture_seconds": 0.0580099999999959,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.645984958,
+          "metadata": {
+            "sequence": 10,
+            "time": 1793156918.0108109,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 9,
+            "device_timestamp": 59408281,
+            "capture_seconds": 0.05905800000000028,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.733715875,
+          "metadata": {
+            "sequence": 11,
+            "time": 1793156918.096076,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 10,
+            "device_timestamp": 60304471,
+            "capture_seconds": 0.05422899999999942,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.834117291,
+          "metadata": {
+            "sequence": 12,
+            "time": 1793156918.196185,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 11,
+            "device_timestamp": 61186052,
+            "capture_seconds": 0.06709800000000143,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675200.922891791,
+          "metadata": {
+            "sequence": 13,
+            "time": 1793156918.282441,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 12,
+            "device_timestamp": 62174891,
+            "capture_seconds": 0.05548899999999435,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.006872666,
+          "metadata": {
+            "sequence": 14,
+            "time": 1793156918.368572,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 13,
+            "device_timestamp": 63031487,
+            "capture_seconds": 0.055175999999995895,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.092781333,
+          "metadata": {
+            "sequence": 15,
+            "time": 1793156918.453612,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 14,
+            "device_timestamp": 63888228,
+            "capture_seconds": 0.05374700000000132,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.175070958,
+          "metadata": {
+            "sequence": 16,
+            "time": 1793156918.540396,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 15,
+            "device_timestamp": 64741112,
+            "capture_seconds": 0.054998000000004765,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.263479041,
+          "metadata": {
+            "sequence": 17,
+            "time": 1793156918.624557,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 16,
+            "device_timestamp": 65597009,
+            "capture_seconds": 0.053640000000001464,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.347949416,
+          "metadata": {
+            "sequence": 18,
+            "time": 1793156918.7115479,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 17,
+            "device_timestamp": 66453100,
+            "capture_seconds": 0.054974999999998886,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.432536458,
+          "metadata": {
+            "sequence": 19,
+            "time": 1793156918.796473,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 18,
+            "device_timestamp": 67314863,
+            "capture_seconds": 0.05363600000000446,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.520146958,
+          "metadata": {
+            "sequence": 20,
+            "time": 1793156918.881886,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 19,
+            "device_timestamp": 68156929,
+            "capture_seconds": 0.05482800000000054,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.601679958,
+          "metadata": {
+            "sequence": 21,
+            "time": 1793156918.966295,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 20,
+            "device_timestamp": 69024313,
+            "capture_seconds": 0.0538749999999979,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.689484208,
+          "metadata": {
+            "sequence": 22,
+            "time": 1793156919.053198,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 21,
+            "device_timestamp": 69870000,
+            "capture_seconds": 0.05501699999999943,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.775664291,
+          "metadata": {
+            "sequence": 23,
+            "time": 1793156919.1371882,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 22,
+            "device_timestamp": 70722381,
+            "capture_seconds": 0.053594999999994286,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.866074666,
+          "metadata": {
+            "sequence": 24,
+            "time": 1793156919.2259,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 23,
+            "device_timestamp": 71587856,
+            "capture_seconds": 0.05580299999999738,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675201.9579675,
+          "metadata": {
+            "sequence": 25,
+            "time": 1793156919.317139,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 24,
+            "device_timestamp": 72482300,
+            "capture_seconds": 0.05853899999999612,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.047015458,
+          "metadata": {
+            "sequence": 26,
+            "time": 1793156919.406955,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 25,
+            "device_timestamp": 73400271,
+            "capture_seconds": 0.05690400000000295,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.133667833,
+          "metadata": {
+            "sequence": 27,
+            "time": 1793156919.493936,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 26,
+            "device_timestamp": 74289939,
+            "capture_seconds": 0.05599199999999627,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.228657416,
+          "metadata": {
+            "sequence": 28,
+            "time": 1793156919.5939462,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 27,
+            "device_timestamp": 75169485,
+            "capture_seconds": 0.06670400000000143,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.313807041,
+          "metadata": {
+            "sequence": 29,
+            "time": 1793156919.679976,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 28,
+            "device_timestamp": 76150485,
+            "capture_seconds": 0.05447099999999949,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.404559708,
+          "metadata": {
+            "sequence": 30,
+            "time": 1793156919.7658901,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 29,
+            "device_timestamp": 77011669,
+            "capture_seconds": 0.0548559999999938,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.488394166,
+          "metadata": {
+            "sequence": 31,
+            "time": 1793156919.849918,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 30,
+            "device_timestamp": 77849922,
+            "capture_seconds": 0.053882999999999015,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.576948541,
+          "metadata": {
+            "sequence": 32,
+            "time": 1793156919.936853,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 31,
+            "device_timestamp": 78707828,
+            "capture_seconds": 0.0549129999999991,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.659578291,
+          "metadata": {
+            "sequence": 33,
+            "time": 1793156920.022212,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 32,
+            "device_timestamp": 79573499,
+            "capture_seconds": 0.05376499999999851,
+            "configured_fps": 5.0
+          }
+        },
+        {
+          "observed": 675202.7467775,
+          "metadata": {
+            "sequence": 34,
+            "time": 1793156920.107291,
+            "width": 2048,
+            "height": 2048,
+            "exposure_ms": 9.999435,
+            "gain": 0,
+            "frame_number": 33,
+            "device_timestamp": 80411864,
+            "capture_seconds": 0.05496699999999777,
+            "configured_fps": 5.0
+          }
+        }
+      ]
+    },
+    {
+      "backend": "native",
+      "startup_seconds": 13.633944291970693,
+      "frames": 30,
+      "elapsed_seconds": 2.230031416984275,
+      "delivered_fps": 13.452725271722727,
+      "capture_median_ms": 70.11041644727811,
+      "capture_p95_ms": 76.8260839395225,
+      "cpu_percent_one_core": 34.97708570647908,
+      "resident_mib": 77.0625,
+      "samples": [
+        {
+          "observed": 675225.861207625,
+          "metadata": {
+            "sequence": 5,
+            "frame_number": 5,
+            "time": 1793156944.1170402,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 87625166,
+            "sensor_counter": 6,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06954204197973013
+          }
+        },
+        {
+          "observed": 675225.935391583,
+          "metadata": {
+            "sequence": 6,
+            "frame_number": 6,
+            "time": 1793156944.192299,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 88376903,
+            "sensor_counter": 7,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07135029195342213
+          }
+        },
+        {
+          "observed": 675226.017067166,
+          "metadata": {
+            "sequence": 7,
+            "frame_number": 7,
+            "time": 1793156944.273056,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 89109246,
+            "sensor_counter": 9,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.0768260839395225
+          }
+        },
+        {
+          "observed": 675226.083937416,
+          "metadata": {
+            "sequence": 8,
+            "frame_number": 8,
+            "time": 1793156944.3443542,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 89895940,
+            "sensor_counter": 10,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06842595897614956
+          }
+        },
+        {
+          "observed": 675226.159111333,
+          "metadata": {
+            "sequence": 9,
+            "frame_number": 9,
+            "time": 1793156944.4166121,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 90621021,
+            "sensor_counter": 11,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.0699499580077827
+          }
+        },
+        {
+          "observed": 675226.23507925,
+          "metadata": {
+            "sequence": 10,
+            "frame_number": 10,
+            "time": 1793156944.4898582,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 91351024,
+            "sensor_counter": 13,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.0696555000031367
+          }
+        },
+        {
+          "observed": 675226.302461,
+          "metadata": {
+            "sequence": 11,
+            "frame_number": 11,
+            "time": 1793156944.561943,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 92076629,
+            "sensor_counter": 14,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06960233394056559
+          }
+        },
+        {
+          "observed": 675226.378272458,
+          "metadata": {
+            "sequence": 12,
+            "frame_number": 12,
+            "time": 1793156944.635184,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 92807648,
+            "sensor_counter": 15,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.0701117079006508
+          }
+        },
+        {
+          "observed": 675226.451675333,
+          "metadata": {
+            "sequence": 13,
+            "frame_number": 13,
+            "time": 1793156944.708522,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 93538994,
+            "sensor_counter": 17,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06941187498159707
+          }
+        },
+        {
+          "observed": 675226.527609125,
+          "metadata": {
+            "sequence": 14,
+            "frame_number": 14,
+            "time": 1793156944.782219,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 94281536,
+            "sensor_counter": 18,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07008974999189377
+          }
+        },
+        {
+          "observed": 675226.597387125,
+          "metadata": {
+            "sequence": 15,
+            "frame_number": 15,
+            "time": 1793156944.856999,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 95072669,
+            "sensor_counter": 20,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07199108402710408
+          }
+        },
+        {
+          "observed": 675226.670012458,
+          "metadata": {
+            "sequence": 16,
+            "frame_number": 16,
+            "time": 1793156944.9292018,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 95744566,
+            "sensor_counter": 21,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06937320798169822
+          }
+        },
+        {
+          "observed": 675226.746131708,
+          "metadata": {
+            "sequence": 17,
+            "frame_number": 17,
+            "time": 1793156945.0017002,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 96465491,
+            "sensor_counter": 22,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06958158290944993
+          }
+        },
+        {
+          "observed": 675226.828745666,
+          "metadata": {
+            "sequence": 18,
+            "frame_number": 18,
+            "time": 1793156945.083462,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 97199051,
+            "sensor_counter": 24,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07783950003795326
+          }
+        },
+        {
+          "observed": 675226.896795583,
+          "metadata": {
+            "sequence": 19,
+            "frame_number": 19,
+            "time": 1793156945.15737,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 98027599,
+            "sensor_counter": 25,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07122495898511261
+          }
+        },
+        {
+          "observed": 675226.972116625,
+          "metadata": {
+            "sequence": 20,
+            "frame_number": 20,
+            "time": 1793156945.230817,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 98754751,
+            "sensor_counter": 26,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07061087491456419
+          }
+        },
+        {
+          "observed": 675227.045965958,
+          "metadata": {
+            "sequence": 21,
+            "frame_number": 21,
+            "time": 1793156945.304733,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 99497363,
+            "sensor_counter": 28,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07117691694293171
+          }
+        },
+        {
+          "observed": 675227.121304041,
+          "metadata": {
+            "sequence": 22,
+            "frame_number": 22,
+            "time": 1793156945.3767989,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 100224251,
+            "sensor_counter": 29,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06913416599854827
+          }
+        },
+        {
+          "observed": 675227.197114416,
+          "metadata": {
+            "sequence": 23,
+            "frame_number": 23,
+            "time": 1793156945.453652,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 101023965,
+            "sensor_counter": 31,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07317354204133153
+          }
+        },
+        {
+          "observed": 675227.272544708,
+          "metadata": {
+            "sequence": 24,
+            "frame_number": 24,
+            "time": 1793156945.530314,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 101760446,
+            "sensor_counter": 32,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07273566699586809
+          }
+        },
+        {
+          "observed": 675227.347497458,
+          "metadata": {
+            "sequence": 25,
+            "frame_number": 25,
+            "time": 1793156945.603842,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 102494665,
+            "sensor_counter": 33,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.069738749996759
+          }
+        },
+        {
+          "observed": 675227.423559833,
+          "metadata": {
+            "sequence": 26,
+            "frame_number": 26,
+            "time": 1793156945.6803951,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 103200165,
+            "sensor_counter": 35,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.0735239579807967
+          }
+        },
+        {
+          "observed": 675227.4947155,
+          "metadata": {
+            "sequence": 27,
+            "frame_number": 27,
+            "time": 1793156945.755146,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 104007185,
+            "sensor_counter": 36,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07010912499390543
+          }
+        },
+        {
+          "observed": 675227.571024583,
+          "metadata": {
+            "sequence": 28,
+            "frame_number": 28,
+            "time": 1793156945.8296168,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 104745476,
+            "sensor_counter": 37,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07141320896334946
+          }
+        },
+        {
+          "observed": 675227.646905166,
+          "metadata": {
+            "sequence": 29,
+            "frame_number": 29,
+            "time": 1793156945.9021142,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 105476144,
+            "sensor_counter": 39,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06962691701482981
+          }
+        },
+        {
+          "observed": 675227.715940416,
+          "metadata": {
+            "sequence": 30,
+            "frame_number": 30,
+            "time": 1793156945.975154,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 106207154,
+            "sensor_counter": 40,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.06915629096329212
+          }
+        },
+        {
+          "observed": 675227.79200975,
+          "metadata": {
+            "sequence": 31,
+            "frame_number": 31,
+            "time": 1793156946.046742,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 107010497,
+            "sensor_counter": 42,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.068505416973494
+          }
+        },
+        {
+          "observed": 675227.866840166,
+          "metadata": {
+            "sequence": 32,
+            "frame_number": 32,
+            "time": 1793156946.123476,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 107685323,
+            "sensor_counter": 43,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07181791705079377
+          }
+        },
+        {
+          "observed": 675227.942504208,
+          "metadata": {
+            "sequence": 33,
+            "frame_number": 33,
+            "time": 1793156946.198229,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 108436103,
+            "sensor_counter": 44,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07097004202660173
+          }
+        },
+        {
+          "observed": 675228.017801375,
+          "metadata": {
+            "sequence": 34,
+            "frame_number": 34,
+            "time": 1793156946.273637,
+            "width": 2048,
+            "height": 2048,
+            "device_timestamp": 109190209,
+            "sensor_counter": 46,
+            "backend": "macos-libusb",
+            "exposure_ms": 10.0,
+            "gain": 0,
+            "capture_seconds": 0.07168991700746119
+          }
+        }
+      ]
+    }
+  ]
+}
