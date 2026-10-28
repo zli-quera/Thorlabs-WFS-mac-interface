@@ -70,7 +70,11 @@ During native streaming, edit **Exposure (ms)** and **Digital gain (%)**. The ca
 
 Exposure requests are quantized to the sensor's supported timing; the camera caption reports the applied value. The existing frame-blanking configuration is preserved, so acquisition rate may vary with exposure. Digital gain scales pixel values and does not recover clipped signal.
 
-The preview marks pixels at or above 254 DN in red. The overlay pools the saturation mask before downsampling, so individual clipped pixels remain visible. Raw pixels used for analysis and saved captures remain monochrome and unchanged. Hardware exposure/gain controls are disabled for saved images and test-mode frames.
+The preview marks pixels at or above 254 DN in red. The overlay pools the saturation mask before downsampling, so individual clipped pixels remain visible. Raw captures remain monochrome and unchanged; analysis uses a corrected working copy when background removal is enabled. Hardware exposure/gain controls are disabled for saved images and test-mode frames.
+
+## Background removal
+
+Enable **Remove background** to estimate and subtract a smooth background from each frame automatically. The estimate uses pixels between spots and interpolates underneath bright cores; no background capture or image upload is needed. Preview and analysis use the corrected image, while saturation rejection and red markers still use the raw sensor values. Changing this option clears a measured flat reference so it can be recaptured with consistent preprocessing. Raw captures are unchanged.
 
 ## Wavefront analysis
 
