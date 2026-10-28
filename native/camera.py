@@ -82,7 +82,7 @@ class Camera:
     def __init__(self,progress=print,stop=None):
         self.progress=progress;self.stop=stop or threading.Event()
         with gzip.open(Path(__file__).with_name('recipe.json.gz'),'rt') as f:self.recipe=json.load(f)
-        self.usb=USB();self.sequence=0;self.frame_number=0
+        self.usb=USB();self.sequence=0;self.frame_number=0;self.factory_calibration=None
         self.protocol_log=Path(__file__).parents[1]/"diagnostics/native_protocol.jsonl"
         self.protocol_log.parent.mkdir(parents=True,exist_ok=True)
     def initialize(self):
@@ -115,6 +115,7 @@ class Camera:
         time.sleep(2)
         commands=self.recipe['initialize']
         reuse_fpga=False
+        factory_read_pending=False
         for i,packet in enumerate(commands):
             if i==12 and getattr(self,'fpga_state',None)==0:
                 identity=self.command(bytes.fromhex(commands[687]))
@@ -124,7 +125,24 @@ class Camera:
                 self.progress('Reusing verified FPGA configuration')
             if reuse_fpga and 12<=i<687:continue
             if self.stop.is_set():raise RuntimeError('Stopped')
-            response=self.command(bytes.fromhex(packet),expected_status=self.recipe['initialize_status'][i])
+            wire=bytes.fromhex(packet)
+            response=self.command(wire,expected_status=self.recipe['initialize_status'][i])
+            if factory_read_pending and wire[1]==0xd4:
+                if len(response)!=564:raise RuntimeError('Incomplete factory-memory response')
+                self.factory_memory=response[52:]
+                cache=self.protocol_log.parents[1]/'runtime'
+                cache.mkdir(parents=True,exist_ok=True)
+                (cache/'factory_memory.bin').write_bytes(self.factory_memory)
+                from factory_memory import decode
+                try:
+                    factory=decode(self.factory_memory)
+                    self.factory_calibration=factory
+                    (cache/'factory_calibration.json').write_text(json.dumps(factory,indent=2)+'\n')
+                except ValueError as error:
+                    self.progress('Factory record validation failed: '+str(error))
+                factory_read_pending=False
+            if wire[1]==0xd3 and len(wire)==580 and wire[61:65]==b'\x1c\x05\x00\x00':
+                factory_read_pending=True
             if i==11:
                 if len(response)!=9:raise RuntimeError('Invalid FPGA status response')
                 self.fpga_state=response[-1]
@@ -198,7 +216,7 @@ class Camera:
               'sensor':'UI337xCP-M','device_timestamp':struct.unpack_from('<Q',chunk,4)[0],
               'stream_timestamp_ns':struct.unpack_from('<Q',leader,20)[0],
               'sensor_counter':struct.unpack_from('<I',chunk,24)[0],
-              'diagnostic':False,'backend':'macos-libusb','exposure_ms':10.,'gain':0,
+              'diagnostic':False,'backend':'macos-libusb','factory_calibration':self.factory_calibration,'exposure_ms':10.,'gain':0,
               'leader_hex':leader.hex(),'chunk_hex':chunk.hex(),'trailer_hex':trailer.hex()}
         return meta,pixels
     def close(self):self.usb.close()

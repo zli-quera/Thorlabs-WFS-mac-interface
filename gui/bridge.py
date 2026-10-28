@@ -14,6 +14,8 @@ import time
 class CameraBridge:
     def __init__(self, root):
         self.root = Path(root)
+        self.guest_script = "sdk_live.py"
+        self.guest_output = "/mnt/host/runtime/live"
         (self.root / "diagnostics").mkdir(parents=True, exist_ok=True)
         self.live = self.root / "runtime" / "live"
         self.live.mkdir(parents=True, exist_ok=True)
@@ -70,7 +72,7 @@ class CameraBridge:
                 self.socket_dir = Path(directory)
                 environment = dict(os.environ, DYLD_INSERT_LIBRARIES=str(library))
                 if (self.root / "native" / "trace_enabled").exists():
-                    environment["WFS_NATIVE_TRACE"] = str(self.root / "native" / "usb_trace.bin")
+                    environment["WFS_NATIVE_TRACE"] = str(getattr(self, "trace_path", self.root / "native" / "usb_trace.bin"))
                 command = [shutil.which("qemu-system-x86_64") or "/opt/homebrew/bin/qemu-system-x86_64",
                            "-machine", "q35", "-cpu", "max", "-accel", "tcg", "-m", "1536", "-smp", "2",
                            "-drive", f"file={disk},format=qcow2,if=virtio", "-nic", "user,model=virtio-net-pci",
@@ -111,7 +113,7 @@ class CameraBridge:
                                     serial.sendall(b"root\n")
                                     buffer, stage = b"", 1
                                 elif stage == 1 and re.search(rb"root@[^\r\n]*#", buffer):
-                                    serial.sendall(b"mkdir -p /mnt/host; mount -t 9p -o trans=virtio,version=9p2000.L hostshare /mnt/host; python3 -u /mnt/host/gui/sdk_live.py /mnt/host/runtime/live\n")
+                                    serial.sendall(("mkdir -p /mnt/host; mount -t 9p -o trans=virtio,version=9p2000.L hostshare /mnt/host; python3 -u /mnt/host/gui/" + self.guest_script + " " + self.guest_output + "\n").encode())
                                     buffer, stage, began = b"", 2, time.monotonic()
                                     self.stage, self.message = "connecting", "Connecting to sensor"
                                 if stage == 2:
