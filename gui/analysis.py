@@ -13,6 +13,8 @@ from scipy import ndimage
 from scipy.spatial import cKDTree, Delaunay, QhullError
 
 
+MATCH_WARNING_FRACTION = .4  # Advisory only; never reject by distance.
+
 MODES = [(1, 1, "Tilt X"), (1, -1, "Tilt Y"), (2, 0, "Defocus"),
          (2, -2, "Astigmatism 45°"), (2, 2, "Astigmatism 0°"),
          (3, -1, "Coma Y"), (3, 1, "Coma X"), (3, -3, "Trefoil Y"),
@@ -149,7 +151,7 @@ def analyze(frame, config, reference=None, diagnostic=False, *, spots=None):
               "spots": spots.xy.tolist(), "peak_dn": spots.peak,
               "background_dn": spots.background, "noise_dn": spots.noise,
               "saturated_fraction": spots.saturated_fraction, "wavefront": None,
-              "tilt": None, "matched_count": 0, "reference_count": len(reference["xy"]) if reference else 0}
+              "tilt": None, "warnings": [], "reliable": False, "matched_count": 0, "reference_count": len(reference["xy"]) if reference else 0}
     if diagnostic:
         result["reason"] = "Diagnostic image · wavefront hidden"
         return result, spots
@@ -171,19 +173,23 @@ def analyze(frame, config, reference=None, diagnostic=False, *, spots=None):
         return result, spots
     ref = np.asarray(reference["xy"])
     distances, matches = cKDTree(spots.xy).query(ref)
-    good = distances < .4 * reference["pitch_px"]
     # Each measured spot can be assigned to only one lenslet.
     selected = []
     used = set()
     for index in np.argsort(distances):
-        if good[index] and int(matches[index]) not in used:
+        if int(matches[index]) not in used:
             selected.append(index)
             used.add(int(matches[index]))
     selected = np.asarray(selected, dtype=int)
     result["matched_count"] = len(selected)
-    if len(selected) < minimum or len(selected) < .5 * len(ref):
+    if len(selected) < minimum:
         result["reason"] = "Too few reference spots matched"
         return result, spots
+    warnings=list(reference.get('warnings',[]))
+    if np.any(distances[selected]>MATCH_WARNING_FRACTION*reference['pitch_px']):
+        warnings.append('Too tilted — lenslet assignment may be unreliable; absolute tilt can wrap by a lenslet pitch')
+    if len(selected)<.5*len(ref):
+        warnings.append('Low matching coverage — reconstruction may be unreliable')
     reference_xy = ref[selected]
     current_xy = spots.xy[matches[selected]]
     normalized = (reference_xy - np.asarray(reference["center"])) / reference["radius_px"]
@@ -203,8 +209,7 @@ def analyze(frame, config, reference=None, diagnostic=False, *, spots=None):
     residual = matrix @ coefficients - target
     residual_px = float(np.sqrt(np.mean(residual**2)) / radius_um * float(focal_mm) * 1000 / pixel_um)
     if residual_px > .15 * reference["pitch_px"]:
-        result["reason"] = "Spot displacement is inconsistent · check the reference"
-        return result, spots
+        warnings.append('Large fit residual — spot assignment or wavefront fit may be unreliable')
     # Real normalized Z(1,+1)=2x and Z(1,-1)=2y on the unit pupil.
     # OPD coefficients are um; physical pupil radius is um, so gradients are dimensionless.
     tilt_slopes = 2 * coefficients[:2] / radius_um
@@ -242,7 +247,7 @@ def analyze(frame, config, reference=None, diagnostic=False, *, spots=None):
     surface -= np.mean(surface[mask])
     values = surface[mask]
     grid = [[float(v) if ok else None for v, ok in zip(row, valid)] for row, valid in zip(surface, mask)]
-    result.update(tilt=tilt, raw_rms_um=float(np.sqrt(np.mean(raw_values**2))),
+    result.update(warnings=list(dict.fromkeys(warnings)),reliable=not warnings,tilt=tilt, raw_rms_um=float(np.sqrt(np.mean(raw_values**2))),
                   raw_pv_um=float(np.ptp(raw_values)), visible=True, reason="Signal accepted", wavefront=grid,
                   rms_um=float(np.sqrt(np.mean(values**2))), pv_um=float(np.ptp(values)),
                   fit_residual_px=residual_px, pupil_radius_mm=radius_um/1000,

@@ -8,6 +8,7 @@ from pathlib import Path
 import threading
 import signal
 import time
+from collections import deque
 import numpy as np
 from PIL import Image
 from flask import Flask, jsonify, request, Response
@@ -43,14 +44,17 @@ offline_capture = None
 simulator = None
 simulation_parameters = dict(DEFAULTS)
 simulation_rate = 0.
+analysis_rate = 0.
 app.config['MAX_CONTENT_LENGTH'] = 32*1024*1024
 
 
 def process():
-    global state, frame, metadata, preview, factory_profile, factory_error, revision, simulation_rate
+    global state, frame, metadata, preview, factory_profile, factory_error, revision, simulation_rate, analysis_rate
     previous = None
     next_frame=time.monotonic()
     last_processed=None
+    analysis_times=deque(maxlen=30)
+    rate_source=None
     while True:
         started=time.monotonic()
         with lock:
@@ -91,6 +95,12 @@ def process():
                         if version == revision:
                             frame, metadata, state, preview = image, meta, result, rendered_preview
                     now=time.monotonic()
+                    source=meta.get('source','native')
+                    if source!=rate_source:
+                        analysis_times.clear();rate_source=source
+                    if last_processed is not None and now-last_processed>3:analysis_times.clear()
+                    analysis_times.append(now)
+                    analysis_rate=((len(analysis_times)-1)/(now-analysis_times[0]) if len(analysis_times)>1 else 0.)
                     if sim and last_processed is not None:
                         simulation_rate=.9*simulation_rate+.1/(now-last_processed) if simulation_rate else 1/(now-last_processed)
                     last_processed=now
@@ -118,7 +128,7 @@ def status():
         testing=simulator is not None
         fresh = bool(metadata) and ((offline and metadata.get('time')==offline_capture[0]['time']) or (not offline and time.time() - metadata.get('time', 0) < 3 and (testing or not bridge.stopping.is_set())))
         result = dict(state) if fresh else dict(visible=False, wavefront=None, reason=bridge.message)
-        return jsonify(analysis=result, camera=metadata, fresh=fresh, stage='simulation' if testing else 'offline' if offline else bridge.stage,
+        return jsonify(analysis=result, camera=metadata, analysis_fps=analysis_rate if fresh and not offline else 0., camera_fps=(simulation_rate if testing else metadata.get('camera_fps',0.)) if fresh and not offline else 0., fresh=fresh, stage='simulation' if testing else 'offline' if offline else bridge.stage,
                        message='Test mode · 14 FPS target' if testing else 'Saved image · offline' if offline else bridge.message, simulation=dict(enabled=testing,parameters=simulation_parameters,target_fps=FPS,analysis_fps=simulation_rate), config=config, reference=reference is not None, backend=bridge.backend, factory_calibration=factory_profile, factory_error=factory_error, controls_supported=True, control_error=bridge.control_error)
 
 

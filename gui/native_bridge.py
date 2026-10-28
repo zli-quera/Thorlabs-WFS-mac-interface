@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import threading
 import time
+from collections import deque
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'native'))
 from camera import Camera
 from controls import validate as validate_controls
@@ -16,9 +17,11 @@ class CameraBridge:
         self.stopping=threading.Event();self.thread=None;self.stage='stopped';self.message='Camera stopped'
         self.exposure_ms=10.;self.gain=0
         self.control_lock=threading.Lock();self.control_error=None
+        self.frame_times=deque(maxlen=30);self.fps=0.
     def start(self):
         if self.thread and self.thread.is_alive():return
         self.stopping.clear()
+        self.frame_times.clear();self.fps=0.;self.control_error=None
         (self.live/'frame.bin').unlink(missing_ok=True)
         self.thread=threading.Thread(target=self._run,daemon=True);self.thread.start()
     def controls(self,exposure_ms,gain):
@@ -41,7 +44,11 @@ class CameraBridge:
                 self._apply_controls(camera)
                 start=time.monotonic()
                 meta,pixels=camera.capture()
-                meta["capture_seconds"]=time.monotonic()-start
+                now=time.monotonic()
+                meta["capture_seconds"]=now-start
+                self.frame_times.append(now)
+                if len(self.frame_times)>1:self.fps=(len(self.frame_times)-1)/(now-self.frame_times[0])
+                meta['camera_fps']=self.fps
                 header=json.dumps(meta).encode()+b'\n'
                 temporary=self.live/'frame.tmp'
                 temporary.write_bytes(header+pixels)

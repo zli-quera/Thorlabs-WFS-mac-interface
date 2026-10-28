@@ -59,6 +59,8 @@ Alternatively, double-click `open_viewer.command`. It opens an existing viewer i
 
 If startup reports incomplete FPGA configuration, unplug and reconnect the sensor, then press **Start**. Avoid running the standalone hardware probe while the GUI camera is active.
 
+Factory matching uses unique nearest-lenslet assignments without a displacement cutoff. Large displacement, low matching coverage, or large fit residual produces an on-screen reliability warning while processing continues. The factory reference remains unchanged. Absolute tilt can wrap by a lenslet pitch; warnings cannot identify every such ambiguity from one periodic spot image. Valid signal, enough distinct lenslets, and a solvable spatial fit are still required.
+
 ## Exposure, gain and saturation
 
 During native streaming, edit **Exposure (ms)** and **Digital gain (%)**. The capture worker applies changes between completed frames with checked USB acknowledgements; the HTTP thread never sends camera commands concurrently with acquisition. Requested settings stay in the inputs, while the camera caption and frame metadata report applied exposure and gain. These are volatile settings and do not write factory memory.

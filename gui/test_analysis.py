@@ -48,6 +48,7 @@ class TiltTests(unittest.TestCase):
         self.assertFalse(at_boundary['tilt']['removed'])
         np.testing.assert_allclose([removed['tilt']['x_urad'],removed['tilt']['y_urad']],expected,atol=8)
         self.assertLess(removed['rms_um'],removed['raw_rms_um']*.1)
+        self.assertLess(removed['pv_um'],removed['raw_pv_um']*.1)
         self.assertTrue(all(c['display_um']==0 for c in removed['coefficients'][:2]))
         retained,_=analyze(image,{**self.cfg,'tilt_limit_urad':100},self.ref)
         self.assertTrue(retained['visible'])
@@ -58,6 +59,14 @@ class TiltTests(unittest.TestCase):
         self.assertEqual(disabled['coefficients'],retained['coefficients'])
         dark,_=analyze(np.zeros_like(image),self.cfg,self.ref)
         self.assertIsNone(dark['tilt'])
+
+    def test_large_fit_residual_warns_without_hiding(self):
+        xy=np.array(self.ref['xy'])
+        shifts=np.random.default_rng(7).uniform(-10,10,size=xy.shape)
+        result,_=analyze(self.render(xy+shifts),self.cfg,self.ref)
+        self.assertTrue(result['visible'],result['reason'])
+        self.assertFalse(result['reliable'])
+        self.assertTrue(any('Large fit residual' in w for w in result['warnings']))
 
     def test_each_component_cutoff_accepts_diagonal_tilt(self):
         # Both 450 urad components qualify even though vector magnitude >500.

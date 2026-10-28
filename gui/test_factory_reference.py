@@ -17,7 +17,7 @@ class FactoryGridTests(unittest.TestCase):
         np.testing.assert_allclose(xy,[[100*1.001*.999-12,200*.999*.999-13]])
     def test_factory_grid_is_not_fitted_to_measured_tilt(self):
         image=np.zeros((2048,2048),dtype=float)
-        pitch=150/5.5;shift=np.array([.3,-.2])
+        pitch=150/5.5;shift=np.array([-12.,-12.])
         for i in range(-6,7):
             for j in range(-6,7):
                 x,y=np.array([1024+i*pitch-12,1024+j*pitch-13])+shift
@@ -27,6 +27,10 @@ class FactoryGridTests(unittest.TestCase):
         ref=reference_from_factory(spots,image.shape,self.profile)
         result,_=analyze(image,dict(focal_mm=5.,tilt_limit_urad=100),ref)
         self.assertTrue(result['visible'],result['reason'])
+        self.assertEqual(result['matched_count'],169)
+        self.assertFalse(result['reliable'])
+        self.assertTrue(any('Too tilted' in w for w in result['warnings']))
+        self.assertIsNone(ref['match_distance_limit_px'])
         self.assertFalse(result['tilt']['removed'])
         expected=np.arctan(shift*5.5/5000)*1e6
         np.testing.assert_allclose([result['tilt']['x_urad'],result['tilt']['y_urad']],expected,atol=8)

@@ -5,7 +5,7 @@ No grid position, rotation or pitch is fitted to the measured image.
 """
 import numpy as np
 from scipy.spatial import cKDTree
-from analysis import make_reference, Spots
+from analysis import make_reference, Spots, MATCH_WARNING_FRACTION
 
 
 def corrected_grid(x,y,calibration):
@@ -49,10 +49,14 @@ def reference_from_factory(spots,shape,profile,array_index=None):
     grid=grid[inside]
     if len(spots.xy)<8:raise ValueError('Too few usable spots for a factory-reference fit')
     distances,indices=cKDTree(grid).query(spots.xy)
-    valid=distances<.4*pitch
-    selected=np.unique(indices[valid])
-    if len(selected)<8 or len(selected)<.5*len(spots.xy):
-        raise ValueError('Too few spots match the factory grid within 0.4 lenslet pitch')
+    selected=np.unique(indices)
+    if len(selected)<8:
+        raise ValueError('Too few distinct lenslets to fit a wavefront')
+    warnings=[]
+    if np.any(distances>MATCH_WARNING_FRACTION*pitch):
+        warnings.append('Too tilted — lenslet assignment may be unreliable; absolute tilt can wrap by a lenslet pitch')
+    if len(selected)<.5*len(spots.xy):
+        warnings.append('Many spots map to the same lenslet — assignment may be unreliable')
     # Restrict the pupil to illuminated lenslets, but retain their factory
     # coordinates unchanged. This does not use the measured image as a flat.
     xy=grid[selected]
@@ -62,5 +66,5 @@ def reference_from_factory(spots,shape,profile,array_index=None):
                sensor_model=profile['model'],thorlabs_serial=profile['thorlabs_serial'],
                array_name=cal['name'],array_index=cal['index'],focal_mm=cal['focal_mm'],
                pitch_px=pitch,illuminated_lenslets=len(selected),
-               factory_grid_lenslets=len(grid),unmatched_measured_spots=int((~valid).sum()))
+               factory_grid_lenslets=len(grid),warnings=warnings,match_distance_limit_px=None,unmatched_measured_spots=0)
     return ref
