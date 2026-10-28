@@ -11,7 +11,8 @@ This is a working instrument-specific prototype, identified as **WFS40-7AR** wit
 - Live raw camera preview, currently displayed at about two updates per second.
 - Detection of Shack–Hartmann spots above an adjustable intensity/noise threshold.
 - Relative wavefront reconstruction by fitting 14 Zernike gradient modes to spot displacements from a measured reference.
-- Fitted tip/tilt angles in µrad, with optional removal only at or below an adjustable total-angle cutoff; piston is removed.
+- Fitted tip/tilt angles in mrad in the viewer, with optional removal only when both absolute components are strictly below the adjustable cutoff; piston is removed.
+- A 14 FPS test mode with five optical alignment sliders and factory-offset-corrected simulated frames.
 - Offline PNG/PGM analysis, measured and displayed Zernike coefficients, and RMS before/after removal.
 - Wavefront and metrics hidden on dark, stale, saturated, diagnostic, or otherwise invalid data.
 
@@ -22,7 +23,7 @@ This is a working instrument-specific prototype, identified as **WFS40-7AR** wit
 - A fresh native start took about 14 seconds in the measured run. This is not yet an optimized streaming driver.
 - The native backend is restricted to the tested instrument serial. Support for other instruments requires protocol and calibration validation.
 - Optical wavefront accuracy under calibrated illumination has not yet been validated. Synthetic defocus recovery and recorded USB frame decoding have been tested.
-- The small-tilt cutoff defaults to 100 µrad as an editable software setting, not an instrument specification. Angles refer to the fitted tilt modes relative to the reference.
+- The per-axis small-tilt cutoff defaults to 500 µrad (0.5 mrad) as an editable software setting, not an instrument specification. Angles refer to the fitted tilt modes relative to the reference.
 
 ## Local firmware dependency
 
@@ -64,9 +65,9 @@ If startup reports incomplete FPGA configuration, unplug and reconnect the senso
 2. Adjust the spot threshold and minimum usable spot count. A known flat reference image is optional if you want a measured relative reference instead.
 3. Factory identity, pixel pitch, lenslet pitch and effective focal length are read automatically during native initialization and cached under `runtime/`. The viewer uses a valid cached factory record for offline images from that same sensor; no manually entered model or focal length is required.
 4. For an optional measured reference, illuminate with a known flat wavefront and press **Set flat reference**. Otherwise retain the automatic factory reference.
-5. Measure subsequent changes relative to that reference. Enable **Remove small tip / tilt** and set the total-angle cutoff in µrad. Tilt above the cutoff stays in the displayed wavefront; measured coefficients remain unchanged.
+5. Measure subsequent changes relative to that reference. Enable **Remove small tip / tilt** and set the per-axis cutoff in µrad. Tilt above the cutoff stays in the displayed wavefront; measured coefficients remain unchanged.
 
-The readout reports fitted X/Y tilt and total angular magnitude, with X to the right and Y downward in image coordinates. For normalized first-order Zernike modes `Z = 2x, 2y`, physical OPD tilt slopes are `2 * coefficient_um / pupil_radius_um`. Angles are `atan(slope)` in µrad; total tilt uses `atan(hypot(slope_x, slope_y))`. The cutoff applies to this total magnitude, inclusively.
+The readout reports fitted X/Y tilt and total angular magnitude, with X to the right and Y downward in image coordinates. For normalized first-order Zernike modes `Z = 2x, 2y`, physical OPD tilt slopes are `2 * coefficient_um / pupil_radius_um`. Angles are `atan(slope)` in µrad; total tilt uses `atan(hypot(slope_x, slope_y))`. Removal requires `abs(X) < cutoff` **and** `abs(Y) < cutoff`; equality does not qualify. The default is 500 µrad per component. The vector magnitude is informational and does not control removal. The viewer displays angles in mrad; the API and CLI retain µrad.
 
 For offline work without opening USB hardware:
 
@@ -80,12 +81,24 @@ A command-line analyzer is also available:
 
 ```sh
 python analyze_image.py measurement.png --factory-memory runtime/factory_memory.bin \
-    --tilt-limit-urad 100 --output result.json
+    --tilt-limit-urad 500 --output result.json
 ```
 
 The factory-memory option supplies reference coordinates and the stored focal length. For a measured reference instead, use `--reference flat.png --focal-mm VALUE`. Without either reference source, the CLI reports signal quality only. Use `--keep-tilt` to retain tilt regardless of magnitude.
 
 The local slope model is `slope = spot_displacement / lenslet_focal_length`, using consistent physical units. Zernike derivatives are fitted to these slopes. Output is optical path difference in micrometres over the measured pupil coverage. Factory reference positions are calculated from checksum-validated memory parameters. If no valid factory record is available, supply a measured flat reference and focal length explicitly. A reference measured under an aberrated beam defines that aberration as the relative zero.
+
+## Test mode
+
+Start `python gui/app.py --offline`, open the viewer, and enable **Test mode · 14 FPS**. A validated local `runtime/factory_memory.bin` is required; run the native reader once if it is missing. USB capture stops when test mode starts. Disable test mode to stop simulation; **Start** explicitly returns to hardware acquisition.
+
+Five sliders and numeric inputs control fiber X/Y (±500 µm), fiber Z (±5 mm), and KM100 tip/tilt (±30 mrad). **Reset alignment** zeros all five. Simulated 2048×2048 mono8 frames include the actual factory offsets and geometric corrections. They pass through the same threshold gate, centroid detector, factory matching, and 14-mode Zernike fit as real frames; analytical slopes are never supplied to the fitter. The rate readout reports actual analysis throughput against the 14 FPS target. At zero alignment, offsets cancel to pixel quantization precision.
+
+The default removal rule applies to real, saved, and simulated data: both fitted components must be strictly below 0.5 mrad. Above that limit, the option is disabled and tilt stays visible. Below it, toggle **Remove small tip / tilt** to compare the full and corrected wavefront. The expanded coefficient table lists normalized real Zernike `(n,m)` modes with measured and displayed OPD coefficients in µm; the measured values remain available after removal.
+
+The optical model is an ideal, aberration-free 125 mm collimator with the fiber at its front focal point and a WFS 100 mm beyond the lens. It traces rays in the rotated lens coordinates and propagates them to the WFS, then uses the stored MLA focal length to render spot displacement. The beam radius is 1.75 mm; spots have 1.7-pixel Gaussian sigma and 8-bit quantization, without random noise. Positive fiber Z increases the source-to-lens distance. Tip rotates about camera X and tilt about camera Y, about the lens center. X points right and Y down.
+
+**This treats KM100 as the lens holder.** A centered lens rotation does not produce the `2 × angle` steering of a mirror. Its leading effects here are weak coma/astigmatism and higher-order steering; lateral fiber translation primarily controls beam tilt, and Z primarily controls defocus. This ideal model does not include the AC254 glass/surface prescription, wavelength dependence, diffraction, an offset mechanical pivot, or real aberration/noise performance. It is for testing alignment/reconstruction behavior, not predicting the exact achromat's aberrations. Nominal focus is defined by the effective focal plane; no unverified physical working distance is assumed.
 
 ## Tests
 
@@ -138,6 +151,7 @@ The comparison pauses the viewer, uses the sensor exclusively, saves results und
 | `native/trace.py`, `native/usb_trace.h` | Development USB trace reader and recorder |
 | `gui/app.py`, `gui/static/` | Local Flask server and browser interface |
 | `gui/native_bridge.py` | Native acquisition worker used by the GUI |
+| `gui/simulation.py` | Ideal collimator ray tracing and factory-offset camera simulation |
 | `gui/analysis.py` | Spot centroids, reference matching and Zernike fitting |
 | `gui/bridge.py`, `gui/sdk_live.py` | Earlier optional Linux/QEMU backend |
 | `benchmark.py` | Hardware performance comparison |

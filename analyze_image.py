@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--pixel-um',type=float,default=5.5)
     parser.add_argument('--threshold-dn',type=float,default=20)
     parser.add_argument('--min-spots',type=int,default=20)
-    parser.add_argument('--tilt-limit-urad',type=float,default=100)
+    parser.add_argument('--tilt-limit-urad',type=float,default=500,help='Strict per-component tilt removal limit (default 500 urad = 0.5 mrad)')
     parser.add_argument('--keep-tilt',action='store_true')
     parser.add_argument('--output',type=Path)
     args=parser.parse_args()

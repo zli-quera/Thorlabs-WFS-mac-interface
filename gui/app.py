@@ -15,12 +15,13 @@ from native_bridge import CameraBridge
 from analysis import analyze, make_reference, detect_spots
 from factory_reference import reference_from_factory
 from factory_memory import decode as decode_factory
+from simulation import Simulator, DEFAULTS, LIMITS, FPS
 
 ROOT = Path(__file__).resolve().parents[1]
 app = Flask(__name__, static_folder='static', static_url_path='')
 bridge = CameraBridge(ROOT)
 lock = threading.RLock()
-config = dict(threshold_dn=20, min_spots=20, focal_mm=None, remove_tilt=True, tilt_limit_urad=100., exposure_ms=10., gain=0)
+config = dict(threshold_dn=20, min_spots=20, focal_mm=None, remove_tilt=True, tilt_limit_urad=500., exposure_ms=10., gain=0)
 reference = None
 factory_profile = None
 factory_error = None
@@ -38,22 +39,34 @@ metadata = {}
 preview = b''
 revision = 0
 offline_capture = None
+simulator = None
+simulation_parameters = dict(DEFAULTS)
+simulation_rate = 0.
 app.config['MAX_CONTENT_LENGTH'] = 32*1024*1024
 
 
 def process():
-    global state, frame, metadata, preview, factory_profile, factory_error, revision
+    global state, frame, metadata, preview, factory_profile, factory_error, revision, simulation_rate
     previous = None
+    next_frame=time.monotonic()
+    last_processed=None
     while True:
+        started=time.monotonic()
         with lock:
-            capture = offline_capture if offline_capture is not None else bridge.read()
+            sim=simulator
+            parameters=dict(simulation_parameters)
+            capture = None if sim else offline_capture if offline_capture is not None else bridge.read()
             if offline_capture is None and capture and capture[0].get('factory_calibration'):
                 incoming=capture[0]['factory_calibration']
                 if factory_profile is None or incoming['sha256']!=factory_profile['sha256']:
                     factory_profile=incoming;factory_error=None
                     if len(incoming['arrays'])==1:config['focal_mm']=incoming['arrays'][0]['focal_mm']
                     revision+=1
-            settings, ref, version = dict(config), reference, revision
+            settings, ref, version = dict(config), None if sim else reference, revision
+        if sim:
+            try:capture=sim.capture(parameters)
+            except Exception as error:
+                with lock:state=dict(visible=False,reason=str(error),wavefront=None)
         if capture:
             meta, pixels = capture
             key = (meta['time'], version)
@@ -66,10 +79,10 @@ def process():
                         if len(spots.xy)>=settings['min_spots'] and spots.saturated_fraction<=.02:
                             try:active_ref=reference_from_factory(spots,image.shape,factory_profile)
                             except ValueError as error:
-                                result,_=analyze(image,settings)
+                                result,_=analyze(image,settings,spots=spots)
                                 result['reason']=str(error)
-                            else:result,_=analyze(image,settings,active_ref)
-                        else:result,_=analyze(image,settings)
+                            else:result,_=analyze(image,settings,active_ref,spots=spots)
+                        else:result,_=analyze(image,settings,spots=spots)
                     else:result,_=analyze(image, settings, active_ref, meta.get('diagnostic', False))
                     result['reference_kind']=active_ref.get('kind') if active_ref else None
                     buf = io.BytesIO()
@@ -79,11 +92,20 @@ def process():
                     with lock:
                         if version == revision:
                             frame, metadata, state, preview = image, meta, result, buf.getvalue()
+                    now=time.monotonic()
+                    if sim and last_processed is not None:
+                        simulation_rate=.9*simulation_rate+.1/(now-last_processed) if simulation_rate else 1/(now-last_processed)
+                    last_processed=now
                     previous = key
                 except Exception as error:
                     with lock:
                         state = dict(visible=False, reason=str(error), wavefront=None)
-        time.sleep(.15)
+        if sim:
+            next_frame=max(next_frame+1/FPS,started)
+            time.sleep(max(0,next_frame-time.monotonic()))
+        else:
+            next_frame=time.monotonic()
+            time.sleep(.02)
 
 
 @app.get('/')
@@ -95,10 +117,11 @@ def index():
 def status():
     with lock:
         offline = offline_capture is not None
-        fresh = bool(metadata) and ((offline and metadata.get('time')==offline_capture[0]['time']) or (not offline and time.time() - metadata.get('time', 0) < 3 and not bridge.stopping.is_set()))
+        testing=simulator is not None
+        fresh = bool(metadata) and ((offline and metadata.get('time')==offline_capture[0]['time']) or (not offline and time.time() - metadata.get('time', 0) < 3 and (testing or not bridge.stopping.is_set())))
         result = dict(state) if fresh else dict(visible=False, wavefront=None, reason=bridge.message)
-        return jsonify(analysis=result, camera=metadata, fresh=fresh, stage='offline' if offline else bridge.stage,
-                       message='Saved image · offline' if offline else bridge.message, config=config, reference=reference is not None, backend=bridge.backend, factory_calibration=factory_profile, factory_error=factory_error)
+        return jsonify(analysis=result, camera=metadata, fresh=fresh, stage='simulation' if testing else 'offline' if offline else bridge.stage,
+                       message='Test mode · 14 FPS target' if testing else 'Saved image · offline' if offline else bridge.message, simulation=dict(enabled=testing,parameters=simulation_parameters,target_fps=FPS,analysis_fps=simulation_rate), config=config, reference=reference is not None, backend=bridge.backend, factory_calibration=factory_profile, factory_error=factory_error)
 
 
 @app.get('/api/frame')
@@ -141,6 +164,7 @@ def set_reference():
     with lock:
         if offline_capture is not None and metadata.get('time')!=offline_capture[0]['time']:
             return jsonify(error='Wait for saved image analysis'),400
+        if simulator is not None:return jsonify(error='Test mode always uses the factory reference'),400
         if frame is None or (offline_capture is None and (bridge.stopping.is_set() or time.time()-metadata.get('time',0)>3)):
             return jsonify(error='Wait for a live image'),400
         result, spots = analyze(frame,config)
@@ -158,7 +182,7 @@ def set_reference():
 
 @app.post('/api/image')
 def saved_image():
-    global offline_capture, revision, state
+    global offline_capture, revision, state, simulator
     upload=request.files.get('image')
     if not upload:return jsonify(error='Choose a monochrome PNG or PGM image'),400
     try:
@@ -171,6 +195,7 @@ def saved_image():
             pixels=image.tobytes()
         bridge.stop()
         with lock:
+            simulator=None
             offline_capture=(dict(time=time.time(),width=width,height=height,pixel_um=5.5,
                                   source='saved image',filename=Path(upload.filename or 'image').name,
                                   diagnostic=False),pixels)
@@ -180,11 +205,41 @@ def saved_image():
     except (OSError,ValueError) as error:return jsonify(error=str(error)),400
 
 
+@app.post('/api/simulation')
+def testing_mode():
+    global simulator, offline_capture, revision, state, simulation_rate
+    data=request.get_json() or {}
+    try:
+        changed={}
+        for name,(lo,hi) in LIMITS.items():
+            if name in data:
+                value=float(data[name])
+                if not np.isfinite(value) or not lo<=value<=hi:raise ValueError(f'{name} must be between {lo} and {hi}')
+                changed[name]=value
+        if data.get('enabled') and factory_profile is None:raise ValueError('Read factory calibration before starting test mode')
+        if data.get('enabled'):bridge.stop()
+        with lock:
+            if data.get('reset'):simulation_parameters.update(DEFAULTS)
+            simulation_parameters.update(changed)
+            if data.get('enabled') and simulator is None:
+                simulator=Simulator(factory_profile)
+                config['focal_mm']=factory_profile['arrays'][0]['focal_mm']
+                simulation_rate=0.
+                offline_capture=None
+            elif data.get('enabled') is False:
+                simulator=None
+            revision+=1
+            state=dict(visible=False,reason='Updating test scene',wavefront=None)
+        return jsonify(ok=True)
+    except (ValueError,TypeError) as error:return jsonify(error=str(error)),400
+
+
 @app.post('/api/camera/<action>')
 def camera(action):
-    global offline_capture, revision, state
+    global offline_capture, revision, state, simulator
     with lock:
         offline_capture=None
+        simulator=None
         revision+=1
         state=dict(visible=False,reason='Changing source',wavefront=None)
     if action=='start':

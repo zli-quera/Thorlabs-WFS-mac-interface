@@ -44,8 +44,8 @@ class TiltTests(unittest.TestCase):
         removed,_=analyze(image,{**self.cfg,'tilt_limit_urad':1000},self.ref)
         self.assertTrue(removed['visible'],removed['reason'])
         self.assertTrue(removed['tilt']['removed'])
-        at_boundary,_=analyze(image,{**self.cfg,'tilt_limit_urad':removed['tilt']['magnitude_urad']},self.ref)
-        self.assertTrue(at_boundary['tilt']['removed'])
+        at_boundary,_=analyze(image,{**self.cfg,'tilt_limit_urad':max(abs(removed['tilt']['x_urad']),abs(removed['tilt']['y_urad']))},self.ref)
+        self.assertFalse(at_boundary['tilt']['removed'])
         np.testing.assert_allclose([removed['tilt']['x_urad'],removed['tilt']['y_urad']],expected,atol=8)
         self.assertLess(removed['rms_um'],removed['raw_rms_um']*.1)
         self.assertTrue(all(c['display_um']==0 for c in removed['coefficients'][:2]))
@@ -58,6 +58,15 @@ class TiltTests(unittest.TestCase):
         self.assertEqual(disabled['coefficients'],retained['coefficients'])
         dark,_=analyze(np.zeros_like(image),self.cfg,self.ref)
         self.assertIsNone(dark['tilt'])
+
+    def test_each_component_cutoff_accepts_diagonal_tilt(self):
+        # Both 450 urad components qualify even though vector magnitude >500.
+        shift=np.tan(np.array([450.,-450.])*1e-6)*5200/5.5
+        image=self.render(np.array(self.ref['xy'])+shift)
+        result,_=analyze(image,{**self.cfg,'tilt_limit_urad':500},self.ref)
+        self.assertGreater(result['tilt']['magnitude_urad'],500)
+        self.assertTrue(result['tilt']['eligible'])
+        self.assertTrue(result['tilt']['removed'])
 
     def test_mixed_aberrations_survive_tilt_removal(self):
         xy=np.array(self.ref['xy']);r=self.ref['radius_px'];x,y=((xy-self.ref['center'])/r).T

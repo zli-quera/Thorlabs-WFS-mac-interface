@@ -44,6 +44,13 @@ def detect_spots(frame, threshold=20):
     cutoff = background + max(float(threshold), 5 * noise)
     if peak < cutoff:
         return empty
+    # Crop the illuminated field before connected-component work. Preserve full
+    # sensor coordinates and full-frame quality statistics.
+    lit_rows,lit_cols=np.nonzero(image>=cutoff)
+    x0=max(0,int(lit_cols.min())-18);y0=max(0,int(lit_rows.min())-18)
+    x1=min(image.shape[1],int(lit_cols.max())+19);y1=min(image.shape[0],int(lit_rows.max())+19)
+    image=image[y0:y1,x0:x1]
+    origin=np.array([x0,y0])
     labels, count = ndimage.label(image >= cutoff)
     if not count or count > 25000:
         return empty
@@ -77,7 +84,7 @@ def detect_spots(frame, threshold=20):
         flux[j]=total
     snr = flux / np.sqrt(np.maximum(flux + sizes[good] * noise**2, 1))
     good = np.isfinite(centers).all(axis=1) & (snr >= 8)
-    return Spots(centers[good], flux[good], peaks[good], background, noise, peak, saturated)
+    return Spots(centers[good]+origin, flux[good], peaks[good], background, noise, peak, saturated)
 
 
 def make_reference(spots, shape, pixel_um):
@@ -135,8 +142,8 @@ def basis(x, y, derivative=None):
     return np.stack(columns, axis=-1)
 
 
-def analyze(frame, config, reference=None, diagnostic=False):
-    spots = detect_spots(frame, config.get("threshold_dn", 20))
+def analyze(frame, config, reference=None, diagnostic=False, *, spots=None):
+    if spots is None:spots = detect_spots(frame, config.get("threshold_dn", 20))
     minimum = int(config.get("min_spots", 20))
     result = {"visible": False, "reason": "Signal below threshold", "spot_count": len(spots.xy),
               "spots": spots.xy.tolist(), "peak_dn": spots.peak,
@@ -202,13 +209,15 @@ def analyze(frame, config, reference=None, diagnostic=False):
     # OPD coefficients are um; physical pupil radius is um, so gradients are dimensionless.
     tilt_slopes = 2 * coefficients[:2] / radius_um
     angle_urad = float(np.arctan(np.linalg.norm(tilt_slopes)) * 1e6)
-    limit_urad = float(config.get("tilt_limit_urad", 100.))
+    limit_urad = float(config.get("tilt_limit_urad", 500.))
     if not np.isfinite(limit_urad) or limit_urad < 0:
         raise ValueError("Tilt cutoff must be a finite non-negative angle")
-    removed = bool(config.get("remove_tilt", True)) and angle_urad <= limit_urad
+    components=np.arctan(tilt_slopes)*1e6
+    eligible=bool(np.all(np.abs(components)<limit_urad))
+    removed = bool(config.get("remove_tilt", True)) and eligible
     tilt = dict(x_urad=float(np.arctan(tilt_slopes[0])*1e6),
                 y_urad=float(np.arctan(tilt_slopes[1])*1e6), magnitude_urad=angle_urad,
-                limit_urad=limit_urad, removed=removed,
+                limit_urad=limit_urad, eligible=eligible, criterion="each_component_strictly_below", removed=removed,
                 status=("Small tilt removed" if removed else
                         "Tilt retained · above cutoff" if config.get("remove_tilt", True) else
                         "Tilt retained · removal disabled"))
