@@ -152,6 +152,10 @@ python -u benchmark.py --frames 30 --backends vm native
 
 The comparison pauses the viewer, uses the sensor exclusively, saves results under `diagnostics/`, and attempts to restore native viewing. Backend switches can require the reconnect described above.
 
+## Windows portability
+
+The current hardware backend is validated on macOS. The UI and analysis can remain shared; the Windows port should isolate USB transport/library loading, validate WinUSB startup and re-enumeration, and add a Windows launcher. See the [Windows portability plan](docs/windows_port.md) for the implementation and validation sequence.
+
 ## Source layout
 
 | Path | Purpose |
