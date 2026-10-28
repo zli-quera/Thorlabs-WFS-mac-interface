@@ -18,7 +18,7 @@ This is a working instrument-specific prototype, identified as **WFS40-7AR** wit
 
 ## Important limits
 
-- Native exposure is currently fixed at nominal **10 ms**, with **0% gain**. Those GUI controls are disabled until their native commands are verified.
+- Native exposure is adjustable from **0.04–150 ms requested**, quantized to sensor timing; the viewer reports the applied exposure. Digital gain is adjustable from **0–100% (1×–4×)**. These controls are enabled during native streaming.
 - Switching backends or reopening the camera can leave incomplete FPGA configuration and require a physical USB reconnect. Startup detects this condition; automatic recovery remains unfinished.
 - A fresh native start took about 14 seconds in the measured run. This is not yet an optimized streaming driver.
 - The native backend is restricted to the tested instrument serial. Support for other instruments requires protocol and calibration validation.
@@ -58,6 +58,14 @@ Open **http://127.0.0.1:8864**. The server binds only to the local Mac.
 Alternatively, double-click `open_viewer.command`. It opens an existing viewer if available; otherwise it uses `.venv/bin/python`. Set `WFS_PYTHON` to select another Python environment. An ignored local `runtime/python_path` can also select the interpreter for this working copy.
 
 If startup reports incomplete FPGA configuration, unplug and reconnect the sensor, then press **Start**. Avoid running the standalone hardware probe while the GUI camera is active.
+
+## Exposure, gain and saturation
+
+During native streaming, edit **Exposure (ms)** and **Digital gain (%)**. The capture worker applies changes between completed frames with checked USB acknowledgements; the HTTP thread never sends camera commands concurrently with acquisition. Requested settings stay in the inputs, while the camera caption and frame metadata report applied exposure and gain. These are volatile settings and do not write factory memory.
+
+For the recorded CMV4000 configuration, the master clock is 40 MHz and FOT register 73 is 20. Exposure is quantized in four sequencer ticks (12.9 µs), plus a 27.735 µs offset. Examples: requests of 0.1, 0.29 and 10 ms yield 0.092235, 0.285735 and 9.999435 ms. Quantization was compared against the official driver's machine code offline; native 0.29 ms and 50% gain were also verified on live frames. The existing frame-blanking configuration is preserved, so acquisition rate may vary with exposure. Gain is the camera FPGA digital multiplier, `1 + 3 × gain_percent / 100`, quantized to 1/256; it does not improve sensor signal-to-noise or restore clipped charge.
+
+The preview marks pixels at or above 254 DN in red. The overlay pools the saturation mask before downsampling, so individual clipped pixels remain visible. Raw pixels used for analysis and saved captures remain monochrome and unchanged. Hardware exposure/gain controls are disabled for saved images and test-mode frames.
 
 ## Wavefront analysis
 
@@ -159,4 +167,4 @@ The comparison pauses the viewer, uses the sensor exclusively, saves results und
 | `benchmark.py` | Hardware performance comparison |
 | `usb_configuration_fix.c` | USB recovery shim used only by the VM backend |
 
-Future work includes reliable warm restarts, native exposure/gain control, diagnostic test patterns, calibrated optical validation, and further optical validation of tilt measurement and removal.
+Future work includes reliable warm restarts, diagnostic test patterns, calibrated optical validation, and further optical validation of tilt measurement and removal.

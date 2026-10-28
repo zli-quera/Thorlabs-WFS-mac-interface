@@ -16,6 +16,7 @@ from analysis import analyze, make_reference, detect_spots
 from factory_reference import reference_from_factory
 from factory_memory import decode as decode_factory
 from simulation import Simulator, DEFAULTS, LIMITS, FPS
+from preview import camera_preview
 
 ROOT = Path(__file__).resolve().parents[1]
 app = Flask(__name__, static_folder='static', static_url_path='')
@@ -85,13 +86,10 @@ def process():
                         else:result,_=analyze(image,settings,spots=spots)
                     else:result,_=analyze(image, settings, active_ref, meta.get('diagnostic', False))
                     result['reference_kind']=active_ref.get('kind') if active_ref else None
-                    buf = io.BytesIO()
-                    thumbnail = Image.fromarray(image)
-                    thumbnail.thumbnail((1024,1024))
-                    thumbnail.save(buf, format='PNG')
+                    rendered_preview=camera_preview(image)
                     with lock:
                         if version == revision:
-                            frame, metadata, state, preview = image, meta, result, buf.getvalue()
+                            frame, metadata, state, preview = image, meta, result, rendered_preview
                     now=time.monotonic()
                     if sim and last_processed is not None:
                         simulation_rate=.9*simulation_rate+.1/(now-last_processed) if simulation_rate else 1/(now-last_processed)
@@ -121,7 +119,7 @@ def status():
         fresh = bool(metadata) and ((offline and metadata.get('time')==offline_capture[0]['time']) or (not offline and time.time() - metadata.get('time', 0) < 3 and (testing or not bridge.stopping.is_set())))
         result = dict(state) if fresh else dict(visible=False, wavefront=None, reason=bridge.message)
         return jsonify(analysis=result, camera=metadata, fresh=fresh, stage='simulation' if testing else 'offline' if offline else bridge.stage,
-                       message='Test mode · 14 FPS target' if testing else 'Saved image · offline' if offline else bridge.message, simulation=dict(enabled=testing,parameters=simulation_parameters,target_fps=FPS,analysis_fps=simulation_rate), config=config, reference=reference is not None, backend=bridge.backend, factory_calibration=factory_profile, factory_error=factory_error)
+                       message='Test mode · 14 FPS target' if testing else 'Saved image · offline' if offline else bridge.message, simulation=dict(enabled=testing,parameters=simulation_parameters,target_fps=FPS,analysis_fps=simulation_rate), config=config, reference=reference is not None, backend=bridge.backend, factory_calibration=factory_profile, factory_error=factory_error, controls_supported=True, control_error=bridge.control_error)
 
 
 @app.get('/api/frame')
@@ -136,13 +134,13 @@ def configure():
     data = request.get_json() or {}
     try:
         changed = {}
-        for key, lo, hi in [('tilt_limit_urad',0,1000000),('threshold_dn',1,250),('min_spots',8,1000),('exposure_ms',.1,150),('gain',0,100),('focal_mm',.05,1000)]:
+        for key, lo, hi in [('tilt_limit_urad',0,1000000),('threshold_dn',1,250),('min_spots',8,1000),('exposure_ms',.04,150),('gain',0,100),('focal_mm',.05,1000)]:
             if key in data:
                 if key == 'focal_mm' and data[key] in ('',None):
                     changed[key] = None
                 else:
                     value = float(data[key])
-                    if not np.isfinite(value) or not lo <= value <= hi:
+                    if not np.isfinite(value) or not lo <= value <= hi or (key=='gain' and value!=int(value)):
                         raise ValueError(f'{key} must be between {lo} and {hi}')
                     changed[key] = int(value) if key in ('min_spots','gain') else value
         if 'remove_tilt' in data:
@@ -152,7 +150,6 @@ def configure():
             config.update(changed)
             revision += 1
             state = dict(visible=False,reason='Updating settings',wavefront=None)
-            bridge.controls(config['exposure_ms'],config['gain'])
         return jsonify(ok=True)
     except (ValueError,TypeError) as error:
         return jsonify(error=str(error)),400

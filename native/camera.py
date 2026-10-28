@@ -11,6 +11,8 @@ import struct
 import threading
 import time
 
+from controls import validate as validate_controls, exposure_packet, gain_packet, exposure_value
+
 class USBError(RuntimeError):
     def __init__(self, operation, code):
         self.code=code
@@ -82,6 +84,7 @@ class Camera:
     def __init__(self,progress=print,stop=None):
         self.progress=progress;self.stop=stop or threading.Event()
         with gzip.open(Path(__file__).with_name('recipe.json.gz'),'rt') as f:self.recipe=json.load(f)
+        self.exposure_ms=exposure_value(10.)[1];self.requested_exposure_ms=10.;self.gain=0;self.gain_factor=1.
         self.usb=USB();self.sequence=0;self.frame_number=0;self.factory_calibration=None
         self.protocol_log=Path(__file__).parents[1]/"diagnostics/native_protocol.jsonl"
         self.protocol_log.parent.mkdir(parents=True,exist_ok=True)
@@ -179,6 +182,21 @@ class Camera:
                 if len(response)!=8+length:raise RuntimeError('Command response length mismatch')
                 return response[8:]
         raise RuntimeError('No matching camera acknowledgement')
+    def set_controls(self,exposure_ms,gain):
+        # Called by the capture owner between completed frames, never from
+        # the HTTP thread. Store applied values only after checked ACKs.
+        exposure_ms,gain=validate_controls(exposure_ms,gain)
+        if exposure_ms!=self.requested_exposure_ms:
+            packet,actual=exposure_packet(self.recipe,exposure_ms)
+            self.command(packet)
+            self.exposure_ms=actual;self.requested_exposure_ms=exposure_ms
+        if gain!=self.gain:
+            packet,factor=gain_packet(self.recipe,gain)
+            self.command(packet)
+            self.gain=gain;self.gain_factor=factor
+        return dict(exposure_ms=self.exposure_ms,requested_exposure_ms=self.requested_exposure_ms,
+                    gain=self.gain,gain_factor=self.gain_factor)
+
     def _read_image(self):
         leader=self.usb.read(0x82,56)
         if len(leader)!=56 or leader[:4]!=b'U3VL':raise RuntimeError('Invalid image leader')
@@ -216,7 +234,7 @@ class Camera:
               'sensor':'UI337xCP-M','device_timestamp':struct.unpack_from('<Q',chunk,4)[0],
               'stream_timestamp_ns':struct.unpack_from('<Q',leader,20)[0],
               'sensor_counter':struct.unpack_from('<I',chunk,24)[0],
-              'diagnostic':False,'backend':'macos-libusb','factory_calibration':self.factory_calibration,'exposure_ms':10.,'gain':0,
+              'diagnostic':False,'backend':'macos-libusb','factory_calibration':self.factory_calibration,'exposure_ms':self.exposure_ms,'requested_exposure_ms':self.requested_exposure_ms,'gain':self.gain,'gain_factor':self.gain_factor,
               'leader_hex':leader.hex(),'chunk_hex':chunk.hex(),'trailer_hex':trailer.hex()}
         return meta,pixels
     def close(self):self.usb.close()

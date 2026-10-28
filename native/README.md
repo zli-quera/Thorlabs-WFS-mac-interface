@@ -11,7 +11,7 @@ Verified on USB 1409:3370, sensor UI337xCP-M, serial 4110057336:
 
 This first backend uses the instrument-specific startup sequence recorded from the vendor driver. It is restricted to serial 4110057336. Its firmware and recipe stay local to this instrument's workspace. A fresh start currently reloads the device configuration; allow approximately 15 seconds.
 
-Current controls: exposure is fixed at nominal 10 ms and gain at 0%. Exposure/gain controls are disabled in the GUI until their register sequences are verified. Optical response under illumination and native diagnostic test-pattern generation remain to be validated. The current sensor is dark; captured raw frames are black with valid transport metadata.
+Current controls: native exposure requests of 0.04–150 ms and FPGA digital master gain of 0–100% (1×–4×). `Camera.set_controls` uses the captured full-resolution timing template, updates only integration registers and the exposure tag, preserves frame blanking/clock, and validates every acknowledgement. Applied exposure accounts for the 12.9 µs quantization. Live checks verified 0.29 ms requested → 0.285735 ms applied, plus a 2.5× gain setting and restoration to nominal 10 ms / unity gain. Commands are issued between frames by the capture owner. These do not modify factory memory.
 
 Open http://127.0.0.1:8864 or double-click ../open_viewer.command.
 

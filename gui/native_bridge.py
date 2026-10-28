@@ -7,6 +7,7 @@ import threading
 import time
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'native'))
 from camera import Camera
+from controls import validate as validate_controls
 
 class CameraBridge:
     backend='macos-libusb'
@@ -14,16 +15,20 @@ class CameraBridge:
         self.root=Path(root);self.live=self.root/'runtime/live';self.live.mkdir(parents=True,exist_ok=True)
         self.stopping=threading.Event();self.thread=None;self.stage='stopped';self.message='Camera stopped'
         self.exposure_ms=10.;self.gain=0
+        self.control_lock=threading.Lock();self.control_error=None
     def start(self):
         if self.thread and self.thread.is_alive():return
         self.stopping.clear()
         (self.live/'frame.bin').unlink(missing_ok=True)
         self.thread=threading.Thread(target=self._run,daemon=True);self.thread.start()
     def controls(self,exposure_ms,gain):
-        # These are fixed until their register sequences are verified natively.
-        if abs(float(exposure_ms)-10.)>.01 or int(gain)!=0:
-            raise ValueError('Native capture currently uses 10 ms exposure and 0% gain')
-        self.exposure_ms,self.gain=float(exposure_ms),int(gain)
+        exposure_ms,gain=validate_controls(exposure_ms,gain)
+        with self.control_lock:
+            self.exposure_ms,self.gain=exposure_ms,gain
+            self.control_error=None
+    def _apply_controls(self,camera):
+        with self.control_lock:exposure,gain=self.exposure_ms,self.gain
+        camera.set_controls(exposure,gain)
     def _progress(self,message):self.message=message
     def _run(self):
         camera=None
@@ -33,6 +38,7 @@ class CameraBridge:
             camera.initialize()
             self.stage='streaming';self.message='Camera online · native macOS'
             while not self.stopping.is_set():
+                self._apply_controls(camera)
                 start=time.monotonic()
                 meta,pixels=camera.capture()
                 meta["capture_seconds"]=time.monotonic()-start
@@ -43,7 +49,8 @@ class CameraBridge:
                 interval=0 if (self.live/'benchmark.json').exists() else .5
                 self.stopping.wait(max(0,interval-(time.monotonic()-start)))
         except Exception as error:
-            if not self.stopping.is_set():self.stage='error';self.message=str(error)
+            if not self.stopping.is_set():
+                self.control_error=str(error);self.stage='error';self.message=str(error)
         finally:
             if camera:camera.close()
             if self.stopping.is_set():self.stage='stopped';self.message='Camera stopped'
