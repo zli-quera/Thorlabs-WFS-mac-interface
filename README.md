@@ -1,8 +1,8 @@
-# Native macOS wavefront sensor viewer
+# Thorlabs wavefront sensor interface
 
-A native macOS interface for a Thorlabs wavefront sensor containing an IDS UI337xCP-M camera. It provides direct USB acquisition through libusb/IOKit, a live camera preview, and relative wavefront analysis on an Apple Silicon Mac.
+Direct USB acquisition, live camera display, and wavefront reconstruction for Thorlabs wavefront sensors.
 
-This is a working instrument-specific prototype, identified as **WFS40-7AR** with an MLA150-7AR array (150 µm lenslet pitch, typical effective focal length 5.2 mm), tested with USB ID `1409:3370`, serial `4110057336`, at 2048 × 2048 monochrome 8-bit resolution and 5.5 µm pixel pitch. Support for additional instruments requires separate validation.
+The software reads the sensor's model, serial number, microlens-array information, and stored optical calibration automatically. Factory reference coordinates and the stored focal length are used for reconstruction; users do not need to enter the sensor model or calibration parameters manually.
 
 ## What works
 
@@ -31,16 +31,16 @@ This is a working instrument-specific prototype, identified as **WFS40-7AR** wit
 
 `native/extract_recipe.py` can regenerate that recipe from the original local `native/usb_trace_initial.bin`. Its packet ranges are specific to that recording; it is not a general trace importer. Keep these local files available when moving this working setup to another computer.
 
-## Setup
+## Requirements and installation
 
-Tested on Apple Silicon macOS with Python 3.12 and Homebrew libusb at `/opt/homebrew/lib/libusb-1.0.dylib`.
+- Python 3.12.
+- Flask, NumPy, SciPy, and Pillow. Tested versions are listed in `requirements.txt`.
+- libusb for hardware acquisition. On macOS it can be installed with `brew install libusb`.
+- The local startup recipe described above for hardware acquisition.
 
-From the repository root:
+Using your preferred Python interpreter, install the Python dependencies from the repository root:
 
 ```sh
-brew install libusb
-python3 -m venv .venv
-source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
@@ -49,13 +49,12 @@ The firmware recipe described above must also be present. The native backend nee
 ## Run
 
 ```sh
-source .venv/bin/activate
 python gui/app.py
 ```
 
-Open **http://127.0.0.1:8864**. The server binds only to the local Mac.
+Open **http://127.0.0.1:8864**. The server binds only to the local computer.
 
-Launch directly with `python gui/app.py` from the repository root after activating your Python environment. For the existing setup on this Mac, activate `~/envs/distortion/bin/activate`.
+Run commands from the repository root with the Python interpreter you chose for installation.
 
 If startup reports incomplete FPGA configuration, unplug and reconnect the sensor, then press **Start**. Avoid running the standalone hardware probe while the GUI camera is active.
 
@@ -65,7 +64,7 @@ Factory matching uses unique nearest-lenslet assignments without a displacement 
 
 During native streaming, edit **Exposure (ms)** and **Digital gain (%)**. The capture worker applies changes between completed frames with checked USB acknowledgements; the HTTP thread never sends camera commands concurrently with acquisition. Requested settings stay in the inputs, while the camera caption and frame metadata report applied exposure and gain. These are volatile settings and do not write factory memory.
 
-For the recorded CMV4000 configuration, the master clock is 40 MHz and FOT register 73 is 20. Exposure is quantized in four sequencer ticks (12.9 µs), plus a 27.735 µs offset. Examples: requests of 0.1, 0.29 and 10 ms yield 0.092235, 0.285735 and 9.999435 ms. Quantization was compared against the official driver's machine code offline; native 0.29 ms and 50% gain were also verified on live frames. The existing frame-blanking configuration is preserved, so acquisition rate may vary with exposure. Gain is the camera FPGA digital multiplier, `1 + 3 × gain_percent / 100`, quantized to 1/256; it does not improve sensor signal-to-noise or restore clipped charge.
+Exposure requests are quantized to the sensor's supported timing; the camera caption reports the applied value. The existing frame-blanking configuration is preserved, so acquisition rate may vary with exposure. Digital gain scales pixel values and does not recover clipped signal.
 
 The preview marks pixels at or above 254 DN in red. The overlay pools the saturation mask before downsampling, so individual clipped pixels remain visible. Raw pixels used for analysis and saved captures remain monochrome and unchanged. Hardware exposure/gain controls are disabled for saved images and test-mode frames.
 
@@ -85,7 +84,7 @@ For offline work without opening USB hardware:
 python gui/app.py --offline
 ```
 
-Use **Analyze saved image** to load a measurement PNG/PGM. With a valid cached factory record, reconstruction starts automatically. Use images from the same instrument that supplied the cached record. Alternatively, load a known flat image, set a measured reference, then load the measurement. Raw images must be 8-bit monochrome; the GUI uses this sensor’s 5.5 µm pixel size. A saved intensity image alone does not establish an absolute wavefront.
+Use **Analyze saved image** to load a measurement PNG/PGM. With a valid cached factory record, reconstruction starts automatically. Use images from the same instrument that supplied the cached record. Alternatively, load a known flat image, set a measured reference, then load the measurement. Raw images must be 8-bit monochrome and use the calibration for the same sensor. A saved intensity image alone does not establish an absolute wavefront.
 
 A command-line analyzer is also available:
 
@@ -106,7 +105,7 @@ Start `python gui/app.py --offline`, open the viewer, and enable **Test mode · 
 
 Five sliders and numeric inputs control fiber X/Y (±500 µm), fiber Z (±5 mm), and KM100 tip/tilt (±30 mrad). **Reset alignment** zeros all five. Simulated 2048×2048 mono8 frames include the actual factory offsets and geometric corrections. They pass through the same threshold gate, centroid detector, factory matching, and 14-mode Zernike fit as real frames; analytical slopes are never supplied to the fitter. The rate readout reports actual analysis throughput against the 14 FPS target. At zero alignment, offsets cancel to pixel quantization precision.
 
-The default removal rule applies to real, saved, and simulated data: both fitted components must be strictly below 0.5 mrad. Above that limit, the option is disabled and tilt stays visible. Below it, toggle **Remove small tip / tilt** to compare the full and corrected wavefront. The expanded coefficient table lists normalized real Zernike `(n,m)` modes with measured and displayed OPD coefficients in µm; the measured values remain available after removal.
+The default removal rule applies to real, saved, and simulated data: both fitted components must be strictly below 0.5 mrad. Above that limit, the option is disabled and tilt stays visible. Below it, toggle **Remove small tip / tilt** to compare the full and corrected wavefront. The expanded coefficient table lists normalized real Zernike `(n,m)` modes with measured and displayed OPD coefficients in the selected unit; the measured values remain available after removal.
 
 The optical model is an ideal, aberration-free 125 mm collimator with the fiber at its front focal point and a WFS 100 mm beyond the lens. It traces rays in the rotated lens coordinates and propagates them to the WFS, then uses the stored MLA focal length to render spot displacement. The beam radius is 1.75 mm; spots have 1.7-pixel Gaussian sigma and 8-bit quantization, without random noise. Positive fiber Z increases the source-to-lens distance. Tip rotates about camera X and tilt about camera Y, about the lens center. X points right and Y down.
 
@@ -119,7 +118,7 @@ python -m unittest discover -s gui -p 'test_*.py'
 python -m unittest discover -s native -p 'test_*.py'
 ```
 
-The GUI suites check synthetic defocus/mixed-aberration recovery, tilt units and cutoff behavior, signal/calibration gates, and offline input validation without hardware. The native suites check factory checksums/field decoding and transport framing. Only the recorded-frame tests skip when the untracked instrument trace is unavailable.
+The GUI suites check synthetic defocus/mixed-aberration recovery, tilt units and cutoff behavior, signal/calibration gates, and offline input validation without hardware. The native suites check factory checksums/field decoding and transport framing. Tests requiring local instrument traces or startup assets skip when those files are unavailable.
 
 For a standalone hardware capture, stop the GUI camera first:
 
