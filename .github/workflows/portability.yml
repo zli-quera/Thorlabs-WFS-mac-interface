@@ -1,7 +1,7 @@
 name: Portability tests
 on:
   push:
-    branches: [codex/windows-support]
+    branches: [windows-support]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6

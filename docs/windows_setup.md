@@ -1,18 +1,18 @@
 # Windows x64 test instructions
 
-Branch: `codex/windows-support`. Windows USB support is implemented but **has not yet been tested with this sensor on a Windows machine**. The current macOS capture can keep running while these files are prepared. No VM or vendor host SDK is required by this branch.
+Branch: `windows-support`. Windows USB support is implemented but **has not yet been tested with this sensor on a Windows machine**. The current macOS capture can keep running while these files are prepared. No VM or vendor host SDK is required by this branch.
 
 ## 1. Get the branch and install Python dependencies
 
 Use your existing x64 Python 3.12 installation/environment. No new virtual environment or activation script is required. If `python` is not your intended global environment, substitute its full executable path in each command.
 
 ```powershell
-git clone --branch codex/windows-support git@github.com:zli-quera/Thorlabs-WFS-mac-interface.git
+git clone --branch windows-support git@github.com:zli-quera/Thorlabs-WFS-mac-interface.git
 cd Thorlabs-WFS-mac-interface
 python -m pip install -r requirements.txt
 ```
 
-For an existing checkout, use `git fetch origin` then `git switch codex/windows-support` and `git pull --ff-only`.
+For an existing checkout, use `git fetch origin` then `git switch windows-support` and `git pull --ff-only`.
 
 ## 2. Transfer the instrument's local assets
 

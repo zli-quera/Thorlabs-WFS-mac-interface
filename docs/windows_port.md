@@ -1,6 +1,6 @@
 # Windows portability plan
 
-Status: the `codex/windows-support` branch implements the transport boundary, Windows x64 library loading, WinUSB setup differences, Python asset transfer and readiness checks. Unit tests run without Windows hardware; sensor operation on Windows still needs validation. Follow [Windows test instructions](windows_setup.md). The browser UI, NumPy/SciPy reconstruction, simulation, and saved-image analysis can remain shared.
+Status: the `windows-support` branch implements the transport boundary, Windows x64 library loading, WinUSB setup differences, Python asset transfer and readiness checks. Unit tests run without Windows hardware; sensor operation on Windows still needs validation. Follow [Windows test instructions](windows_setup.md). The browser UI, NumPy/SciPy reconstruction, simulation, and saved-image analysis can remain shared.
 
 ## Recommended structure
 
