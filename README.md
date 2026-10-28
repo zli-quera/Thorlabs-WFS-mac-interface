@@ -88,6 +88,8 @@ The factory-memory option supplies reference coordinates and the stored focal le
 
 The local slope model is `slope = spot_displacement / lenslet_focal_length`, using consistent physical units. Zernike derivatives are fitted to these slopes. Output is optical path difference in micrometres over the measured pupil coverage. Factory reference positions are calculated from checksum-validated memory parameters. If no valid factory record is available, supply a measured flat reference and focal length explicitly. A reference measured under an aberrated beam defines that aberration as the relative zero.
 
+The **Wavefront unit** dropdown switches the map scale, RMS/PV, and measured/displayed Zernike coefficients between micrometres and waves. Waves is the default, with an editable wavelength of **700 nm**. Conversion is `waves = OPD_um × 1000 / wavelength_nm`; these are unwrapped optical path differences in cycles. A positive wavelength is required. Unit changes affect display only; tilt angles stay in mrad, the removal cutoff stays in µrad, and API/CLI results remain in physical units.
+
 ## Test mode
 
 Start `python gui/app.py --offline`, open the viewer, and enable **Test mode · 14 FPS**. A validated local `runtime/factory_memory.bin` is required; run the native reader once if it is missing. USB capture stops when test mode starts. Disable test mode to stop simulation; **Start** explicitly returns to hardware acquisition.
