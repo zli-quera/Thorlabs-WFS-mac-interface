@@ -55,7 +55,7 @@ python gui/app.py
 
 Open **http://127.0.0.1:8864**. The server binds only to the local Mac.
 
-Alternatively, double-click `open_viewer.command`. It opens an existing viewer if available; otherwise it uses `.venv/bin/python`. Set `WFS_PYTHON` to select another Python environment. An ignored local `runtime/python_path` can also select the interpreter for this working copy.
+Launch directly with `python gui/app.py` from the repository root after activating your Python environment. For the existing setup on this Mac, activate `~/envs/distortion/bin/activate`.
 
 If startup reports incomplete FPGA configuration, unplug and reconnect the sensor, then press **Start**. Avoid running the standalone hardware probe while the GUI camera is active.
 

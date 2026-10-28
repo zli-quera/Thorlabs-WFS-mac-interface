@@ -1,4 +1,4 @@
-Open http://127.0.0.1:8864 while the viewer is running. To launch again, double-click ../open_viewer.command.
+Open http://127.0.0.1:8864 while the viewer is running. Launch from the repository root with `python gui/app.py` after activating your Python environment.
 
 The camera now uses the native macOS backend in ../native/camera.py. No Linux helper is launched. It displays raw 2048×2048 mono frames, downsampled to 1024×1024 in the browser, at about two updates per second. Exposure and digital gain controls are enabled during native streaming. Requested exposure is quantized to sensor timing; the camera caption reports the applied value. Saturated pixels (≥254 DN) are marked red in the preview without altering the raw analysis data. A fresh camera start takes approximately 15 seconds. The browser needs no camera permission.
 

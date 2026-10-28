@@ -13,7 +13,7 @@ This first backend uses the instrument-specific startup sequence recorded from t
 
 Current controls: native exposure requests of 0.04–150 ms and FPGA digital master gain of 0–100% (1×–4×). `Camera.set_controls` uses the captured full-resolution timing template, updates only integration registers and the exposure tag, preserves frame blanking/clock, and validates every acknowledgement. Applied exposure accounts for the 12.9 µs quantization. Live checks verified 0.29 ms requested → 0.285735 ms applied, plus a 2.5× gain setting and restoration to nominal 10 ms / unity gain. Commands are issued between frames by the capture owner. These do not modify factory memory.
 
-Open http://127.0.0.1:8864 or double-click ../open_viewer.command.
+From the repository root, run `python gui/app.py`, then open http://127.0.0.1:8864.
 
 Hardware probe (close/stop the GUI camera first):
 `python native/camera.py --frames 3`
