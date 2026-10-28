@@ -13,6 +13,7 @@ import numpy as np
 from PIL import Image
 from flask import Flask, jsonify, request, Response
 from native_bridge import CameraBridge
+from libusb_loader import platform_label
 from analysis import analyze, make_reference, detect_spots
 from factory_reference import reference_from_factory
 from factory_memory import decode as decode_factory
@@ -129,7 +130,7 @@ def status():
         fresh = bool(metadata) and ((offline and metadata.get('time')==offline_capture[0]['time']) or (not offline and time.time() - metadata.get('time', 0) < 3 and (testing or not bridge.stopping.is_set())))
         result = dict(state) if fresh else dict(visible=False, wavefront=None, reason=bridge.message)
         return jsonify(analysis=result, camera=metadata, analysis_fps=analysis_rate if fresh and not offline else 0., camera_fps=(simulation_rate if testing else metadata.get('camera_fps',0.)) if fresh and not offline else 0., fresh=fresh, stage='simulation' if testing else 'offline' if offline else bridge.stage,
-                       message='Test mode · 14 FPS target' if testing else 'Saved image · offline' if offline else bridge.message, simulation=dict(enabled=testing,parameters=simulation_parameters,target_fps=FPS,analysis_fps=simulation_rate), config=config, reference=reference is not None, backend=bridge.backend, factory_calibration=factory_profile, factory_error=factory_error, controls_supported=True, control_error=bridge.control_error)
+                       message='Test mode · 14 FPS target' if testing else 'Saved image · offline' if offline else bridge.message, simulation=dict(enabled=testing,parameters=simulation_parameters,target_fps=FPS,analysis_fps=simulation_rate), config=config, reference=reference is not None, backend=bridge.backend, factory_calibration=factory_profile, factory_error=factory_error, platform_label=platform_label(), controls_supported=True, control_error=bridge.control_error)
 
 
 @app.get('/api/frame')

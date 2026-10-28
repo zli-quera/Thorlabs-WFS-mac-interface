@@ -1,4 +1,4 @@
-"""Read and validate this instrument's factory EEPROM over native macOS USB.
+"""Read and validate this instrument's factory EEPROM over native libusb USB.
 Stop the GUI's live camera first. No persistent-memory writes are issued.
 """
 import json

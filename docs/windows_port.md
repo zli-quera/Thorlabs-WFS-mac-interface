@@ -1,6 +1,6 @@
 # Windows portability plan
 
-Status: the current acquisition backend is validated on macOS only. This is a proposed port, not a claim of Windows hardware support. The browser UI, NumPy/SciPy reconstruction, simulation, and saved-image analysis can remain shared.
+Status: the `codex/windows-support` branch implements the transport boundary, Windows x64 library loading, WinUSB setup differences, Python asset transfer and readiness checks. Unit tests run without Windows hardware; sensor operation on Windows still needs validation. Follow [Windows test instructions](windows_setup.md). The browser UI, NumPy/SciPy reconstruction, simulation, and saved-image analysis can remain shared.
 
 ## Recommended structure
 
@@ -9,7 +9,7 @@ Keep one camera protocol implementation and one analysis pipeline. Separate plat
 1. Extract the USB transport and add a library loader. Use system discovery / an explicit override on macOS and a matching x64 `libusb-1.0.dll` on Windows. Remove the hardcoded Homebrew path from shared camera logic. Use a controlled DLL location and produce a clear architecture/dependency error.
 2. Target Windows x64 first. Use libusb with WinUSB for control and bulk transfers. The libusb project recommends WinUSB and documents limits on reset, configuration selection and concurrent access; audit startup against those limits rather than assuming every macOS operation is portable. See the [official Windows backend documentation](https://github.com/libusb/libusb/wiki/Windows).
 3. Validate driver binding in both firmware boot and runtime states, including re-enumeration. Check USB link-feature requests, interface claiming, endpoint recovery and concurrent acknowledgement/image reads. Keep the existing recipe's VID/PID and serial validation until another instrument has been independently checked.
-4. Add a Windows launcher that creates or selects a local Python environment, installs `requirements.txt`, reuses an already-running viewer, and opens the local URL. The page and analysis should not fork into Windows-specific versions.
+4. Launch directly with `python gui/app.py` using the existing Python installation. No shell launcher or new virtual environment is needed. The page and analysis remain shared.
 5. Make instrument assets explicit. A source checkout does not include `native/recipe.json.gz`, vendor firmware payloads, captures, or the local factory-memory cache. Supply authorized instrument assets locally and read calibration from that sensor on startup. Do not assume a fresh GitHub clone can cold-start the hardware by itself.
 
 Changing the device's Windows driver binding can affect its availability to the vendor application. Record the original binding and document how to restore it; do not change it automatically as part of normal app startup.

@@ -1,0 +1,24 @@
+name: Portability tests
+on:
+  push:
+    branches: [codex/windows-support]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s native -p "test_*.py"
+      - run: python -m unittest discover -s gui -p "test_*.py"
+      - run: python native/doctor.py --offline

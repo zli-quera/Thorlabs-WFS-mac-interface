@@ -1,5 +1,6 @@
 import io
 import unittest
+from unittest.mock import patch
 import numpy as np
 from PIL import Image
 import app as viewer
@@ -25,7 +26,9 @@ class OfflineAPITests(unittest.TestCase):
     def test_simulation_validation_and_source_selection(self):
         for bad in ({'x_um':501},{'tip_mrad':'nan'},{'z_mm':6}):
             self.assertEqual(self.client.post('/api/simulation',json=bad).status_code,400)
-        if viewer.factory_profile:
+        import test_factory_reference as fixtures
+        fixture=fixtures.FactoryGridTests();fixture.setUp()
+        with patch.object(viewer,'factory_profile',fixture.profile):
             self.assertEqual(self.client.post('/api/simulation',json={'enabled':True,'reset':True}).status_code,200)
             self.assertIsNotNone(viewer.simulator)
             self.assertTrue(self.client.get('/api/state').json['simulation']['enabled'])

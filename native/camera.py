@@ -1,9 +1,8 @@
-"""Native macOS userspace USB backend for instrument 4110057336.
+"""Native userspace USB backend for instrument 4110057336.
 
-No Linux process or vendor host SDK. Uses macOS libusb (IOKit underneath).
+No Linux process or vendor host SDK. Uses libusb on macOS and Windows; Windows hardware validation is pending.
 Initial implementation uses this instrument's observed startup recipe.
 """
-import ctypes as c
 import gzip
 import json
 from pathlib import Path
@@ -13,83 +12,23 @@ import time
 
 from controls import validate as validate_controls, exposure_packet, gain_packet, exposure_value
 
-class USBError(RuntimeError):
-    def __init__(self, operation, code):
-        self.code=code
-        super().__init__(f'{operation}: libusb {code}')
-
-class USB:
-    def __init__(self):
-        self.lib=c.CDLL('/opt/homebrew/lib/libusb-1.0.dylib')
-        signatures={
-            'libusb_init':([c.POINTER(c.c_void_p)],c.c_int),
-            'libusb_exit':([c.c_void_p],None),
-            'libusb_open_device_with_vid_pid':([c.c_void_p,c.c_uint16,c.c_uint16],c.c_void_p),
-            'libusb_close':([c.c_void_p],None),
-            'libusb_set_configuration':([c.c_void_p,c.c_int],c.c_int),
-            'libusb_claim_interface':([c.c_void_p,c.c_int],c.c_int),
-            'libusb_set_interface_alt_setting':([c.c_void_p,c.c_int,c.c_int],c.c_int),
-            'libusb_release_interface':([c.c_void_p,c.c_int],c.c_int),
-            'libusb_clear_halt':([c.c_void_p,c.c_ubyte],c.c_int),
-            'libusb_control_transfer':([c.c_void_p,c.c_uint8,c.c_uint8,c.c_uint16,c.c_uint16,c.c_void_p,c.c_uint16,c.c_uint],c.c_int),
-            'libusb_bulk_transfer':([c.c_void_p,c.c_ubyte,c.c_void_p,c.c_int,c.POINTER(c.c_int),c.c_uint],c.c_int)}
-        for name,(args,result) in signatures.items():
-            fn=getattr(self.lib,name);fn.argtypes=args;fn.restype=result
-        self.context=c.c_void_p();self.handle=None;self.claimed=False
-        self.check(self.lib.libusb_init(c.byref(self.context)),'USB initialization')
-    def check(self,result,name):
-        if result<0:raise USBError(name,result)
-        return result
-    def open(self):
-        self.handle=self.lib.libusb_open_device_with_vid_pid(self.context,0x1409,0x3370)
-        if not self.handle:raise RuntimeError('Sensor not connected or USB access unavailable')
-        identity=self.control(0xc0,0xb1,0,0,40)
-        if b'4110057336' not in identity:
-            self.close_handle();raise RuntimeError('Startup recipe is specific to sensor 4110057336')
-        descriptor=self.control(0x80,6,0x200,0,9)
-        self.check(self.lib.libusb_set_configuration(self.handle,1),'Set USB configuration')
-        for feature in (48,49):
-            self.control(0,1,feature,0,0)
-        return struct.unpack_from('<H',descriptor,2)[0]>18
-    def claim(self):
-        self.check(self.lib.libusb_claim_interface(self.handle,0),'Claim interface')
-        self.claimed=True
-        self.check(self.lib.libusb_set_interface_alt_setting(self.handle,0,0),'Select interface alternate')
-        for feature in (48,49):self.control(0,1,feature,0,0)
-        for ep in (1,0x81):self.check(self.lib.libusb_clear_halt(self.handle,ep),'Clear endpoint')
-    def control(self,bm,request,value,index,data,timeout=3000):
-        length=data if isinstance(data,int) else len(data)
-        buffer=c.create_string_buffer(length or 1)
-        if not isinstance(data,int):buffer[:length]=data
-        n=self.check(self.lib.libusb_control_transfer(self.handle,bm,request,value,index,buffer,length,timeout),'Control transfer')
-        return buffer.raw[:n]
-    def write(self,data):
-        buffer=c.create_string_buffer(data);actual=c.c_int()
-        self.check(self.lib.libusb_bulk_transfer(self.handle,1,buffer,len(data),c.byref(actual),5000),'Command write')
-        if actual.value!=len(data):raise RuntimeError('Incomplete command write')
-    def read(self,ep,length,timeout=5000):
-        buffer=c.create_string_buffer(length);actual=c.c_int()
-        result=self.lib.libusb_bulk_transfer(self.handle,ep,buffer,length,c.byref(actual),timeout)
-        self.check(result,f'Endpoint {ep:02x} read')
-        return buffer.raw[:actual.value]
-    def close_handle(self):
-        if self.handle:
-            if self.claimed:self.lib.libusb_release_interface(self.handle,0)
-            self.lib.libusb_close(self.handle);self.handle=None;self.claimed=False
-    def close(self):
-        self.close_handle()
-        if self.context:self.lib.libusb_exit(self.context);self.context=None
+from usb_transport import USB, USBError
+from libusb_loader import backend_name, platform_label
 
 class Camera:
     def __init__(self,progress=print,stop=None):
         self.progress=progress;self.stop=stop or threading.Event()
-        with gzip.open(Path(__file__).with_name('recipe.json.gz'),'rt') as f:self.recipe=json.load(f)
+        recipe_path=Path(__file__).with_name('recipe.json.gz')
+        if not recipe_path.is_file():
+            raise RuntimeError('Missing instrument startup asset: native/recipe.json.gz. '
+                               'Transfer the local instrument assets first; see docs/windows_setup.md.')
+        with gzip.open(recipe_path,'rt') as f:self.recipe=json.load(f)
         self.exposure_ms=exposure_value(10.)[1];self.requested_exposure_ms=10.;self.gain=0;self.gain_factor=1.
         self.usb=USB();self.sequence=0;self.frame_number=0;self.factory_calibration=None
         self.protocol_log=Path(__file__).parents[1]/"diagnostics/native_protocol.jsonl"
         self.protocol_log.parent.mkdir(parents=True,exist_ok=True)
     def initialize(self):
-        self.progress('Opening sensor directly on macOS')
+        self.progress('Opening sensor directly on '+platform_label())
         runtime=self.usb.open()
         if not runtime:
             self.progress('Loading volatile camera firmware')
@@ -234,7 +173,7 @@ class Camera:
               'sensor':'UI337xCP-M','device_timestamp':struct.unpack_from('<Q',chunk,4)[0],
               'stream_timestamp_ns':struct.unpack_from('<Q',leader,20)[0],
               'sensor_counter':struct.unpack_from('<I',chunk,24)[0],
-              'diagnostic':False,'backend':'macos-libusb','factory_calibration':self.factory_calibration,'exposure_ms':self.exposure_ms,'requested_exposure_ms':self.requested_exposure_ms,'gain':self.gain,'gain_factor':self.gain_factor,
+              'diagnostic':False,'backend':backend_name(),'factory_calibration':self.factory_calibration,'exposure_ms':self.exposure_ms,'requested_exposure_ms':self.requested_exposure_ms,'gain':self.gain,'gain_factor':self.gain_factor,
               'leader_hex':leader.hex(),'chunk_hex':chunk.hex(),'trailer_hex':trailer.hex()}
         return meta,pixels
     def close(self):self.usb.close()

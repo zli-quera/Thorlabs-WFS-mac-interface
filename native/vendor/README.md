@@ -1,0 +1,1 @@
+Place the official x64 `libusb-1.0.dll` here for Windows testing, or set `WFS_LIBUSB_PATH` to an absolute DLL path. DLL files are intentionally ignored by Git. See [Windows setup](../../docs/windows_setup.md).

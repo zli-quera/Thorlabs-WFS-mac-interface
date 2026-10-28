@@ -1,4 +1,4 @@
-# Native macOS wavefront sensor viewer
+# Native wavefront sensor viewer · macOS / Windows test branch
 
 A native macOS interface for a Thorlabs wavefront sensor containing an IDS UI337xCP-M camera. It provides direct USB acquisition through libusb/IOKit, a live camera preview, and relative wavefront analysis on an Apple Silicon Mac.
 
@@ -30,6 +30,10 @@ This is a working instrument-specific prototype, identified as **WFS40-7AR** wit
 **A source-only checkout cannot acquire images by itself.** Native capture also needs `native/recipe.json.gz`, which contains this instrument's recorded startup commands and vendor firmware payloads. The working local copy already has it; it is deliberately excluded from Git, along with the original USB traces, captured images, and calibration data.
 
 `native/extract_recipe.py` can regenerate that recipe from the original local `native/usb_trace_initial.bin`. Its packet ranges are specific to that recording; it is not a general trace importer. Keep these local files available when moving this working setup to another computer.
+
+## Windows test branch
+
+This branch adds native Windows x64 USB support, pending a sensor test on Windows. See [Windows setup and testing](docs/windows_setup.md) for the direct Python commands, WinUSB/DLL setup and local instrument-asset transfer. No new virtual environment or shell launcher is required. macOS hardware remains the validated reference.
 
 ## Setup
 
@@ -154,7 +158,7 @@ The comparison pauses the viewer, uses the sensor exclusively, saves results und
 
 ## Windows portability
 
-The current hardware backend is validated on macOS. The UI and analysis can remain shared; the Windows port should isolate USB transport/library loading, validate WinUSB startup and re-enumeration, and add a Windows launcher. See the [Windows portability plan](docs/windows_port.md) for the implementation and validation sequence.
+The native USB transport is isolated in `native/usb_transport.py`, with platform library loading in `native/libusb_loader.py`. Windows x64 uses libusb/WinUSB; startup, re-enumeration and hardware behavior still require Windows validation. See [Windows setup](docs/windows_setup.md) and the [portability plan](docs/windows_port.md).
 
 ## Source layout
 

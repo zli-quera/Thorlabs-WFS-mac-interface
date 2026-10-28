@@ -1,4 +1,4 @@
-Native macOS camera backend
+Native camera backend · Windows test branch
 
 The GUI now imports `gui/native_bridge.py`, which runs `native/camera.py` directly on the Mac through ARM64 libusb/IOKit. No Linux process, virtual machine, or vendor host SDK is used at runtime. The instrument still runs its own vendor firmware, uploaded into volatile RAM by the native backend.
 
@@ -24,3 +24,5 @@ Protocol checks without hardware:
 The older VM backend and its disk are retained for development comparison but are not launched by the GUI.
 
 Restart limitation discovered during benchmarking: switching backends or reopening the camera can leave an incomplete FPGA configuration and require a physical USB reconnect. Startup now detects that condition and checks the FPGA identifier before reusing an existing configuration; automatic recovery is not yet verified. See ../docs/benchmark.md for measured performance.
+
+Windows x64 support is implemented on `codex/windows-support`, pending hardware validation. The transport is `usb_transport.py`; `libusb_loader.py` resolves the platform library without loading USB at import. Use `python native/doctor.py --offline` for a software check or `--usb` for read-only enumeration. See [Windows setup](../docs/windows_setup.md). The normal command on both platforms is `python gui/app.py` from the repo root.
