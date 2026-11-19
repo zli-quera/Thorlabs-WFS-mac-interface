@@ -10,6 +10,7 @@ The software reads the sensor's model, serial number, microlens-array informatio
 - Native access to the stored factory identity/MLA record, with checksum validation. [Factory-memory details](docs/factory_memory.md). The viewer constructs the reference grid automatically from its offsets and geometric corrections.
 - Live raw camera preview, currently displayed at about two updates per second.
 - Detection of Shack–Hartmann spots above an adjustable intensity/noise threshold.
+- Rough major/minor 1/e² beam diameters from a Gaussian fit to integrated lenslet-spot brightness.
 - Relative wavefront reconstruction by fitting 14 Zernike gradient modes to spot displacements from a measured reference.
 - Fitted tip/tilt angles in mrad in the viewer, with optional removal only when both absolute components are strictly below the adjustable cutoff; piston is removed.
 - A 14 FPS test mode with five optical alignment sliders and factory-offset-corrected simulated frames.
@@ -181,3 +182,11 @@ The native USB transport is isolated in `native/usb_transport.py`, with platform
 | `usb_configuration_fix.c` | USB recovery shim used only by the VM backend |
 
 Future work includes reliable warm restarts, diagnostic test patterns, calibrated optical validation, and further optical validation of tilt measurement and removal.
+
+### Rough beam profiler
+
+The camera panel reports the major and minor **1/e² intensity diameters** in mm and the major-axis angle. An elliptical Gaussian is fitted to the integrated brightness of detected lenslet spots, using the sensor pixel size. This estimates the overall illuminated envelope and runs independently of wavefront reconstruction; it does not require a flat-wavefront reference.
+
+The estimate assumes a roughly Gaussian beam. Saturated spots are excluded and flagged. Clipping, too few lenslets across the beam, poor Gaussian agreement, or insufficient detected tails produce warnings. Dark frames, flat envelopes, and invalid fits show no diameter. Changing the detection threshold or background subtraction can affect the estimate. This is a rough alignment aid, not a calibrated beam-size measurement.
+
+Startup selects the supported camera electronics from its USB identity and reads the connected camera serial dynamically. Cameras with matching hardware fields can use the recorded startup sequence; other camera electronics still need their own startup implementation. Factory calibration is read on every startup and must validate before capture. A copy is cached under `runtime/devices/<camera-serial>/`; the startup recipe is a host-side command/firmware asset, not the sensor's calibration record.

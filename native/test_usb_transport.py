@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock,patch
 import libusb_loader as loader
-from usb_transport import USB,USBError,DeviceDescriptor
+from usb_transport import USB,USBError,DeviceDescriptor,camera_identity
 
 class LoaderTests(unittest.TestCase):
     def test_explicit_missing_path_does_not_fall_back(self):
@@ -26,6 +26,15 @@ class LoaderTests(unittest.TestCase):
         self.assertEqual(loader.backend_name('win32'),'windows-libusb')
         self.assertEqual(loader.platform_label('win32'),'Windows')
 
+class IdentityTests(unittest.TestCase):
+    def test_same_hardware_accepts_both_serials(self):
+        for serial in (b'4110057336',b'4108662184'):
+            for suffix in ('0000000000000000000000000000000000000001520c','00000000000000000000000000003f0303000a01521c'):
+                identity=bytes.fromhex('0108016400006a00')+serial+bytes.fromhex(suffix)
+                self.assertEqual(camera_identity(identity),serial.decode())
+                for bad in (identity[:-1],b'X'+identity[1:],identity[:-1]+b'X',identity[:8]+b'XXXXXXXXXX'+identity[18:]):
+                    with self.assertRaises(RuntimeError):camera_identity(bad)
+
 class TransportTests(unittest.TestCase):
     def library(self,configuration=1,open_status=0):
         lib=SimpleNamespace()
@@ -45,7 +54,7 @@ class TransportTests(unittest.TestCase):
         return lib
     def test_windows_avoids_configuration_reset_and_macos_workaround(self):
         lib=self.library();usb=USB(library=lib,system='win32')
-        usb.control=Mock(side_effect=[b'4110057336',bytes.fromhex('090220000101008032')])
+        usb.control=Mock(side_effect=[bytes.fromhex('0108016400006a00')+b'4110057336'+bytes.fromhex('0000000000000000000000000000000000000001520c'),bytes.fromhex('090220000101008032')])
         self.assertTrue(usb.open());usb.claim()
         self.assertEqual(usb.control.call_count,2)
         lib.libusb_set_configuration.assert_not_called()

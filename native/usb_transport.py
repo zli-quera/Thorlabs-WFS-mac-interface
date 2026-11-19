@@ -15,6 +15,24 @@ class DeviceDescriptor(c.Structure):
               ('bcdDevice',c.c_uint16),('iManufacturer',c.c_uint8),('iProduct',c.c_uint8),
               ('iSerialNumber',c.c_uint8),('bNumConfigurations',c.c_uint8)]
 
+def camera_identity(identity):
+    """Validate the recorded camera hardware identity, allowing different serials.
+
+    These fields match the known camera electronics, not every Thorlabs WFS.
+    Unknown hardware must get a separate startup implementation.
+    """
+    prefix=bytes.fromhex('0108016400006a00')
+    # Firmware-state fields differ before and after volatile firmware upload.
+    suffixes={bytes.fromhex('0000000000000000000000000000000000000001520c'),
+              bytes.fromhex('00000000000000000000000000003f0303000a01521c')}
+    if len(identity)!=40 or identity[:8]!=prefix or identity[18:] not in suffixes:
+        raise RuntimeError('Unsupported camera hardware identity: '+identity.hex())
+    serial=identity[8:18]
+    if not all(48<=v<=57 for v in serial):
+        raise RuntimeError('Invalid camera serial in hardware identity')
+    return serial.decode('ascii')
+
+
 class USBError(RuntimeError):
     def __init__(self, operation, code):
         self.code=code
@@ -42,7 +60,7 @@ class USB:
             'libusb_bulk_transfer':([c.c_void_p,c.c_ubyte,c.c_void_p,c.c_int,c.POINTER(c.c_int),c.c_uint],c.c_int)}
         for name,(args,result) in signatures.items():
             fn=getattr(self.lib,name);fn.argtypes=args;fn.restype=result
-        self.context=c.c_void_p();self.handle=None;self.claimed=False
+        self.context=c.c_void_p();self.handle=None;self.claimed=False;self.serial=None
         self.check(self.lib.libusb_init(c.byref(self.context)),'USB initialization')
     def check(self,result,name):
         if result<0:raise USBError(name,result)
@@ -72,8 +90,9 @@ class USB:
             else:
                 raise RuntimeError('Sensor 1409:3370 is not connected or not enumerated')
         identity=self.control(0xc0,0xb1,0,0,40)
-        if b'4110057336' not in identity:
-            self.close_handle();raise RuntimeError('Startup recipe is specific to sensor 4110057336')
+        try:self.serial=camera_identity(identity)
+        except RuntimeError:
+            self.close_handle();raise
         descriptor=self.control(0x80,6,0x200,0,9)
         self.configure()
         self.disable_link_power_management()

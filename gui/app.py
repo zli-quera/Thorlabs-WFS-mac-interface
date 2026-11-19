@@ -20,6 +20,7 @@ from factory_memory import decode as decode_factory
 from simulation import Simulator, DEFAULTS, LIMITS, FPS
 from preview import camera_preview
 from background import subtract_background
+from beam_profile import beam_profile
 
 ROOT = Path(__file__).resolve().parents[1]
 app = Flask(__name__, static_folder='static', static_url_path='')
@@ -82,9 +83,9 @@ def process():
                     raw = np.frombuffer(pixels, np.uint8).reshape(meta['height'], meta['width']).copy()
                     image,background_dn=subtract_background(raw,settings['remove_background'])
                     saturation_source=raw if settings['remove_background'] else None
+                    spots=detect_spots(image,settings['threshold_dn'],saturation_source=saturation_source)
                     active_ref=ref
                     if active_ref is None and factory_profile is not None and not meta.get('diagnostic',False):
-                        spots=detect_spots(image,settings['threshold_dn'],saturation_source=saturation_source)
                         if len(spots.xy)>=settings['min_spots'] and spots.saturated_fraction<=.02:
                             try:active_ref=reference_from_factory(spots,image.shape,factory_profile)
                             except ValueError as error:
@@ -92,10 +93,11 @@ def process():
                                 result['reason']=str(error)
                             else:result,_=analyze(image,settings,active_ref,spots=spots,saturation_source=saturation_source)
                         else:result,_=analyze(image,settings,spots=spots,saturation_source=saturation_source)
-                    else:result,_=analyze(image, settings, active_ref, meta.get('diagnostic', False),saturation_source=saturation_source)
+                    else:result,_=analyze(image, settings, active_ref, meta.get('diagnostic', False),spots=spots,saturation_source=saturation_source)
                     result['reference_kind']=active_ref.get('kind') if active_ref else None
                     result['background_dn_subtracted']=background_dn
                     result['peak_dn']=int(raw.max())
+                    result['beam_profile']=beam_profile(spots,raw.shape,meta.get('pixel_um'),saturated=bool(np.any(raw>=254)),diagnostic=meta.get('diagnostic',False))
                     rendered_preview=camera_preview(image,saturation_source=raw)
                     with lock:
                         if version == revision:

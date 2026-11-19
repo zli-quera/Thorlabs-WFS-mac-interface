@@ -1,4 +1,4 @@
-"""Native userspace USB backend for instrument 4110057336.
+"""Native userspace USB backend for supported camera electronics.
 
 No Linux process or vendor host SDK. Uses libusb on macOS and Windows; Windows hardware validation is pending.
 Initial implementation uses this instrument's observed startup recipe.
@@ -30,6 +30,8 @@ class Camera:
     def initialize(self):
         self.progress('Opening sensor directly on '+platform_label())
         runtime=self.usb.open()
+        self.serial=self.usb.serial
+        self.progress('Detected camera '+self.serial)
         if not runtime:
             self.progress('Loading volatile camera firmware')
             previous_write=None
@@ -72,16 +74,18 @@ class Camera:
             if factory_read_pending and wire[1]==0xd4:
                 if len(response)!=564:raise RuntimeError('Incomplete factory-memory response')
                 self.factory_memory=response[52:]
-                cache=self.protocol_log.parents[1]/'runtime'
-                cache.mkdir(parents=True,exist_ok=True)
-                (cache/'factory_memory.bin').write_bytes(self.factory_memory)
                 from factory_memory import decode
-                try:
-                    factory=decode(self.factory_memory)
-                    self.factory_calibration=factory
-                    (cache/'factory_calibration.json').write_text(json.dumps(factory,indent=2)+'\n')
-                except ValueError as error:
-                    self.progress('Factory record validation failed: '+str(error))
+                # Fail startup if this connected unit's calibration is invalid;
+                # never continue capturing with another unit's cached record.
+                factory=decode(self.factory_memory)
+                factory['camera_serial']=self.serial
+                self.factory_calibration=factory
+                cache=self.protocol_log.parents[1]/'runtime'
+                targets=[cache/'devices'/self.serial,cache]
+                for target in targets:
+                    target.mkdir(parents=True,exist_ok=True)
+                    (target/'factory_memory.bin').write_bytes(self.factory_memory)
+                    (target/'factory_calibration.json').write_text(json.dumps(factory,indent=2)+'\n')
                 factory_read_pending=False
             if wire[1]==0xd3 and len(wire)==580 and wire[61:65]==b'\x1c\x05\x00\x00':
                 factory_read_pending=True
@@ -90,7 +94,9 @@ class Camera:
                 self.fpga_state=response[-1]
                 if self.fpga_state not in (0,0x2c):raise RuntimeError(f'Unexpected FPGA state {self.fpga_state:02x}')
             if i%200==0:self.progress(f'Configuring sensor {i+1}/{len(commands)}')
-        self.progress('Native camera ready')
+        if self.factory_calibration is None:
+            raise RuntimeError('Connected camera did not return valid factory calibration')
+        self.progress('Native camera '+self.serial+' ready')
     def command(self,packet,expected_status=0):
         packet=bytearray(packet)
         old=struct.unpack_from('<H',packet,12)[0]
@@ -169,7 +175,7 @@ class Camera:
             self.command(bytes.fromhex(self.recipe['end_capture']))
         self.frame_number+=1
         meta={'sequence':self.frame_number,'frame_number':self.frame_number,'time':time.time(),
-              'width':2048,'height':2048,'pixel_um':5.5,'serial':self.recipe['serial'],
+              'width':2048,'height':2048,'pixel_um':self.factory_calibration['arrays'][0]['pixel_um'],'serial':self.serial,
               'sensor':'UI337xCP-M','device_timestamp':struct.unpack_from('<Q',chunk,4)[0],
               'stream_timestamp_ns':struct.unpack_from('<Q',leader,20)[0],
               'sensor_counter':struct.unpack_from('<I',chunk,24)[0],
